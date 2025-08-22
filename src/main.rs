@@ -1,6 +1,4 @@
 use clap::Parser;
-use std::collections::HashMap;
-use std::error::Error;
 use std::io::{Read, Write};
 use std::net::TcpStream;
 
@@ -51,31 +49,31 @@ fn main() {
     frame_id_size: None,
   };
 
-  let p = packets::JDWPCommandPayload::version(());
+  let p = packets::JDWPCommandPayload::Version(NoData {});
   payloads.push(p.clone());
   send_packet(&mut stream, (payloads.len() - 1) as u32, &p).unwrap();
   println!("Send version command");
   let received = receive_packet(&mut stream, &payloads, context.clone()).unwrap();
   println!("Received packet: {:?}", received);
 
-  let p = packets::JDWPCommandPayload::id_sizes(());
+  let p = packets::JDWPCommandPayload::IdSizes(NoData {});
   payloads.push(p.clone());
   send_packet(&mut stream, (payloads.len() - 1) as u32, &p).unwrap();
   println!("Send id_sizes command");
   let received = receive_packet(&mut stream, &payloads, context.clone()).unwrap();
   println!("Received packet: {:?}", received);
-  let JDWPCommandResponse::id_sizes(data) = received.data else {
+  let JDWPCommandResponse::IdSizes(data) = received.data else {
     panic!("Expected id_sizes response");
   };
   context.set_from_id_sizes_response(&data);
 
-  let p = packets::JDWPCommandPayload::classes_by_signature("Ljava/lang/String;".into());
+  let p = packets::JDWPCommandPayload::ClassesBySignature("Ljava/lang/String;".into());
   payloads.push(p.clone());
   send_packet(&mut stream, (payloads.len() - 1) as u32, &p).unwrap();
   println!("Send classes_by_signature command");
   let received = receive_packet(&mut stream, &payloads, context.clone()).unwrap();
   println!("Received packet: {:?}", received);
-  let JDWPCommandResponse::classes_by_signature(data) = received.data else {
+  let JDWPCommandResponse::ClassesBySignature(data) = received.data else {
     panic!("Expected classes_by_signature response");
   };
   println!("Classes by signature: {:?}", data);
