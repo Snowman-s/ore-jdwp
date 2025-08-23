@@ -51,14 +51,14 @@ fn main() {
 
   let p = packets::JDWPCommandPayload::Version(NoData {});
   payloads.push(p.clone());
-  send_packet(&mut stream, (payloads.len() - 1) as u32, &p).unwrap();
+  send_packet(&mut stream, (payloads.len() - 1) as i32, &p).unwrap();
   println!("Send version command");
   let received = receive_packet(&mut stream, &payloads, context.clone()).unwrap();
   println!("Received packet: {:?}", received);
 
   let p = packets::JDWPCommandPayload::IdSizes(NoData {});
   payloads.push(p.clone());
-  send_packet(&mut stream, (payloads.len() - 1) as u32, &p).unwrap();
+  send_packet(&mut stream, (payloads.len() - 1) as i32, &p).unwrap();
   println!("Send id_sizes command");
   let received = receive_packet(&mut stream, &payloads, context.clone()).unwrap();
   println!("Received packet: {:?}", received);
@@ -69,7 +69,7 @@ fn main() {
 
   let p = packets::JDWPCommandPayload::ClassesBySignature("Ljava/lang/String;".into());
   payloads.push(p.clone());
-  send_packet(&mut stream, (payloads.len() - 1) as u32, &p).unwrap();
+  send_packet(&mut stream, (payloads.len() - 1) as i32, &p).unwrap();
   println!("Send classes_by_signature command");
   let received = receive_packet(&mut stream, &payloads, context.clone()).unwrap();
   println!("Received packet: {:?}", received);

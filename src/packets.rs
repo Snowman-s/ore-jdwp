@@ -3,19 +3,6 @@ use std::{
   io::{Read, Write},
 };
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct NoData {}
-
-impl NoData {
-  pub fn write_to<W: Write>(&self, _w: &mut W) -> Result<(), std::io::Error> {
-    Ok(())
-  }
-
-  pub fn read_from<R: Read>(_r: &mut R) -> Result<Self, std::io::Error> {
-    Ok(NoData {})
-  }
-}
-
 #[derive(Debug, Clone)]
 pub struct JDWPContext {
   pub field_id_size: Option<u8>,
@@ -32,6 +19,38 @@ impl JDWPContext {
     self.object_id_size = Some(response.object_id_size as u8);
     self.reference_id_size = Some(response.reference_id_size as u8);
     self.frame_id_size = Some(response.frame_id_size as u8);
+  }
+}
+
+pub trait PacketData: Debug + Clone + PartialEq + Eq {
+  fn write_to<W: Write>(&self, w: &mut W) -> Result<(), std::io::Error>;
+  fn read_from<R: Read>(r: &mut R, context: &JDWPContext) -> Result<Self, std::io::Error>
+  where
+    Self: Sized;
+}
+
+impl PacketData for i32 {
+  fn write_to<W: Write>(&self, w: &mut W) -> Result<(), std::io::Error> {
+    w.write_all(&self.to_be_bytes())
+  }
+
+  fn read_from<R: Read>(r: &mut R, _c: &JDWPContext) -> Result<Self, std::io::Error> {
+    let mut buf = [0u8; 4];
+    r.read_exact(&mut buf)?;
+    Ok(i32::from_be_bytes(buf))
+  }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct NoData {}
+
+impl PacketData for NoData {
+  fn write_to<W: Write>(&self, _w: &mut W) -> Result<(), std::io::Error> {
+    Ok(())
+  }
+
+  fn read_from<R: Read>(_r: &mut R, _c: &JDWPContext) -> Result<Self, std::io::Error> {
+    Ok(NoData {})
   }
 }
 
@@ -70,12 +89,12 @@ macro_rules! jdwp_command_map {
     pub fn int_repr_to_responce_to(
       cmd: &JDWPCommandPayload,
       data: &Vec<u8>,
-      _con: JDWPContext,
+      con: JDWPContext,
     ) -> Option<JDWPCommandResponse> {
       let mut cursor = std::io::Cursor::new(data);
       match cmd {
         $(JDWPCommandPayload::$name(_) => {
-          <$response>::read_from(&mut cursor).ok().map(JDWPCommandResponse::$name)
+          <$response>::read_from(&mut cursor, &con).ok().map(JDWPCommandResponse::$name)
         }),*
       }
     }
@@ -90,8 +109,8 @@ jdwp_command_map!(
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct JDWPReplyPacket {
-  pub length: u32,
-  pub id: u32,
+  pub length: i32,
+  pub id: i32,
   pub flags: u8,
   pub error_code: u16,
   pub data: JDWPCommandResponse,
@@ -99,22 +118,14 @@ pub struct JDWPReplyPacket {
 
 pub fn send_packet<W: Write>(
   stream: &mut W,
-  id: u32,
+  id: i32,
   cmd: &JDWPCommandPayload,
 ) -> Result<(), std::io::Error> {
   if let Some(data) = payload_to_int_repr(cmd) {
-    stream.write_all(&(11 - 2 + data.len() as u32).to_be_bytes())?; // Placeholder for length
+    stream.write_all(&(11 - 2 + data.len() as i32).to_be_bytes())?; // Placeholder for length
     stream.write_all(&id.to_be_bytes())?; // ID
     stream.write_all(&0_u8.to_be_bytes())?; // Flags
     stream.write_all(&data)?;
-
-    println!(
-      "Sent packet: length={}, id={}, flags={}, data={:?}",
-      11 + data.len() as u32,
-      id,
-      0_u8,
-      data
-    );
 
     Ok(())
   } else {
@@ -131,28 +142,16 @@ pub fn receive_packet<R: Read>(
   payloads: &[JDWPCommandPayload],
   context: JDWPContext,
 ) -> Option<JDWPReplyPacket> {
-  let mut length_bytes = [0; 4];
-  reader.read_exact(&mut length_bytes).ok()?;
-  let length = u32::from_be_bytes(length_bytes);
-
-  println!("Received packet length: {}", length);
-
-  let mut id_bytes = [0; 4];
-  reader.read_exact(&mut id_bytes).ok()?;
-  let id = u32::from_be_bytes(id_bytes);
-
-  println!("Received packet ID: {}", id);
+  let length = i32::read_from(reader, &context).ok()?;
+  let id = i32::read_from(reader, &context).ok()?;
 
   let mut flags_bytes = [0; 1];
   reader.read_exact(&mut flags_bytes).ok()?;
   let flags = flags_bytes[0];
 
-  println!("Received packet flags: {}", flags);
-
   let mut error_code_bytes = [0; 2];
   reader.read_exact(&mut error_code_bytes).ok()?;
   let error_code = u16::from_be_bytes(error_code_bytes);
-  println!("Received packet error code: {}", error_code);
 
   let remain_packet: Vec<u8> = {
     let mut buf = vec![0; (length - 11) as usize];
@@ -181,7 +180,7 @@ pub fn receive_packet<R: Read>(
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct JDWPString {
-  pub length: u32,
+  pub length: i32,
   pub data: String,
 }
 
@@ -189,23 +188,21 @@ impl From<&str> for JDWPString {
   fn from(val: &str) -> Self {
     let bytes = val.as_bytes();
     JDWPString {
-      length: bytes.len() as u32,
+      length: bytes.len() as i32,
       data: val.to_owned(),
     }
   }
 }
 
-impl JDWPString {
-  pub fn write_to<W: Write>(&self, w: &mut W) -> Result<(), std::io::Error> {
+impl PacketData for JDWPString {
+  fn write_to<W: Write>(&self, w: &mut W) -> Result<(), std::io::Error> {
     w.write_all(&self.length.to_be_bytes())?;
     w.write_all(self.data.as_bytes())?;
     Ok(())
   }
 
-  pub fn read_from<R: Read>(r: &mut R) -> Result<Self, std::io::Error> {
-    let mut len_bytes = [0u8; 4];
-    r.read_exact(&mut len_bytes)?;
-    let length = u32::from_be_bytes(len_bytes);
+  fn read_from<R: Read>(r: &mut R, _c: &JDWPContext) -> Result<Self, std::io::Error> {
+    let length = i32::read_from(r, _c)?;
     let mut buf = vec![0u8; length as usize];
     r.read_exact(&mut buf)?;
     let data = String::from_utf8(buf)
@@ -222,11 +219,11 @@ pub enum JDWPTypeTag {
   Array = 3_u8,
 }
 
-impl JDWPTypeTag {
-  pub fn write_to<W: Write>(&self, w: &mut W) -> Result<(), std::io::Error> {
+impl PacketData for JDWPTypeTag {
+  fn write_to<W: Write>(&self, w: &mut W) -> Result<(), std::io::Error> {
     w.write_all(&[self.clone() as u8])
   }
-  pub fn read_from<R: Read>(r: &mut R) -> Result<Self, std::io::Error> {
+  fn read_from<R: Read>(r: &mut R, _c: &JDWPContext) -> Result<Self, std::io::Error> {
     let mut data = [0u8; 1];
     r.read_exact(&mut data)?;
     match data[0] {
@@ -243,18 +240,16 @@ impl JDWPTypeTag {
 
 #[derive(PartialEq, Eq, Hash, Clone)]
 struct JDWPClassStatus {
-  status: u32,
+  status: i32,
 }
 
-impl JDWPClassStatus {
-  pub fn write_to<W: Write>(&self, w: &mut W) -> Result<(), std::io::Error> {
+impl PacketData for JDWPClassStatus {
+  fn write_to<W: Write>(&self, w: &mut W) -> Result<(), std::io::Error> {
     w.write_all(&self.status.to_be_bytes())
   }
-  pub fn read_from<R: Read>(r: &mut R) -> Result<Self, std::io::Error> {
-    let mut status_bytes = [0u8; 4];
-    r.read_exact(&mut status_bytes)?;
+  fn read_from<R: Read>(r: &mut R, _c: &JDWPContext) -> Result<Self, std::io::Error> {
     Ok(JDWPClassStatus {
-      status: u32::from_be_bytes(status_bytes),
+      status: i32::read_from(r, _c)?,
     })
   }
 }
@@ -281,15 +276,23 @@ pub struct JDWPReferenceTypeId {
   ref_id: u64,
 }
 
-impl JDWPReferenceTypeId {
-  pub fn write_to<W: Write>(&self, w: &mut W) -> Result<(), std::io::Error> {
+impl PacketData for JDWPReferenceTypeId {
+  fn write_to<W: Write>(&self, w: &mut W) -> Result<(), std::io::Error> {
     w.write_all(&self.ref_id.to_be_bytes())
   }
-  pub fn read_from<R: Read>(r: &mut R) -> Result<Self, std::io::Error> {
-    let mut ref_id_bytes = [0u8; 8];
+  fn read_from<R: Read>(r: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
+    let mut ref_id_bytes = vec![
+      0u8;
+      c.reference_id_size.ok_or(std::io::Error::new(
+        std::io::ErrorKind::InvalidData,
+        "Reference ID size not set in context",
+      ))? as usize
+    ];
     r.read_exact(&mut ref_id_bytes)?;
     Ok(JDWPReferenceTypeId {
-      ref_id: u64::from_be_bytes(ref_id_bytes),
+      ref_id: u64::from_be_bytes(ref_id_bytes.try_into().map_err(|_| {
+        std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid reference ID size")
+      })?),
     })
   }
 }
@@ -298,62 +301,53 @@ impl JDWPReferenceTypeId {
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct VersionResponse {
   pub description: JDWPString,
-  pub jdwp_major: u32,
-  pub jdwp_minor: u32,
+  pub jdwp_major: i32,
+  pub jdwp_minor: i32,
   pub vm_version: JDWPString,
   pub vm_name: JDWPString,
 }
 
-impl VersionResponse {
-  pub fn write_to<W: Write>(&self, w: &mut W) -> Result<(), std::io::Error> {
+impl PacketData for VersionResponse {
+  fn write_to<W: Write>(&self, w: &mut W) -> Result<(), std::io::Error> {
     self.description.write_to(w)?;
-    w.write_all(&self.jdwp_major.to_be_bytes())?;
-    w.write_all(&self.jdwp_minor.to_be_bytes())?;
+    self.jdwp_major.write_to(w)?;
+    self.jdwp_minor.write_to(w)?;
     self.vm_version.write_to(w)?;
     self.vm_name.write_to(w)?;
     Ok(())
   }
-  pub fn read_from<R: Read>(r: &mut R) -> Result<Self, std::io::Error> {
-    let description = JDWPString::read_from(r)?;
-    let mut major_bytes = [0u8; 4];
-    r.read_exact(&mut major_bytes)?;
-    let jdwp_major = u32::from_be_bytes(major_bytes);
-    let mut minor_bytes = [0u8; 4];
-    r.read_exact(&mut minor_bytes)?;
-    let jdwp_minor = u32::from_be_bytes(minor_bytes);
-    let vm_version = JDWPString::read_from(r)?;
-    let vm_name = JDWPString::read_from(r)?;
+  fn read_from<R: Read>(r: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     Ok(VersionResponse {
-      description,
-      jdwp_major,
-      jdwp_minor,
-      vm_version,
-      vm_name,
+      description: JDWPString::read_from(r, c)?,
+      jdwp_major: i32::read_from(r, c)?,
+      jdwp_minor: i32::read_from(r, c)?,
+      vm_version: JDWPString::read_from(r, c)?,
+      vm_name: JDWPString::read_from(r, c)?,
     })
   }
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct ClassesBySignatureResponse {
-  classes: u32,
+  classes: i32,
   class: Vec<ClassesBySignatureResponseClass>,
 }
 
-impl ClassesBySignatureResponse {
-  pub fn write_to<W: Write>(&self, w: &mut W) -> Result<(), std::io::Error> {
+impl PacketData for ClassesBySignatureResponse {
+  fn write_to<W: Write>(&self, w: &mut W) -> Result<(), std::io::Error> {
     w.write_all(&self.classes.to_be_bytes())?;
     for c in &self.class {
       c.write_to(w)?;
     }
     Ok(())
   }
-  pub fn read_from<R: Read>(r: &mut R) -> Result<Self, std::io::Error> {
+  fn read_from<R: Read>(r: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let mut classes_bytes = [0u8; 4];
     r.read_exact(&mut classes_bytes)?;
-    let classes = u32::from_be_bytes(classes_bytes);
+    let classes = i32::from_be_bytes(classes_bytes);
     let mut class = Vec::new();
     for _ in 0..classes {
-      class.push(ClassesBySignatureResponseClass::read_from(r)?);
+      class.push(ClassesBySignatureResponseClass::read_from(r, c)?);
     }
     Ok(ClassesBySignatureResponse { classes, class })
   }
@@ -366,36 +360,33 @@ pub struct ClassesBySignatureResponseClass {
   status: JDWPClassStatus,
 }
 
-impl ClassesBySignatureResponseClass {
-  pub fn write_to<W: Write>(&self, w: &mut W) -> Result<(), std::io::Error> {
+impl PacketData for ClassesBySignatureResponseClass {
+  fn write_to<W: Write>(&self, w: &mut W) -> Result<(), std::io::Error> {
     self.ref_type_tag.write_to(w)?;
     self.type_id.write_to(w)?;
     self.status.write_to(w)?;
     Ok(())
   }
-  pub fn read_from<R: Read>(r: &mut R) -> Result<Self, std::io::Error> {
-    let ref_type_tag = JDWPTypeTag::read_from(r)?;
-    let type_id = JDWPReferenceTypeId::read_from(r)?;
-    let status = JDWPClassStatus::read_from(r)?;
+  fn read_from<R: Read>(r: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     Ok(ClassesBySignatureResponseClass {
-      ref_type_tag,
-      type_id,
-      status,
+      ref_type_tag: JDWPTypeTag::read_from(r, c)?,
+      type_id: JDWPReferenceTypeId::read_from(r, c)?,
+      status: JDWPClassStatus::read_from(r, c)?,
     })
   }
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct IdSizesResponse {
-  pub field_id_size: u32,
-  pub method_id_size: u32,
-  pub object_id_size: u32,
-  pub reference_id_size: u32,
-  pub frame_id_size: u32,
+  pub field_id_size: i32,
+  pub method_id_size: i32,
+  pub object_id_size: i32,
+  pub reference_id_size: i32,
+  pub frame_id_size: i32,
 }
 
-impl IdSizesResponse {
-  pub fn write_to<W: Write>(&self, w: &mut W) -> Result<(), std::io::Error> {
+impl PacketData for IdSizesResponse {
+  fn write_to<W: Write>(&self, w: &mut W) -> Result<(), std::io::Error> {
     w.write_all(&self.field_id_size.to_be_bytes())?;
     w.write_all(&self.method_id_size.to_be_bytes())?;
     w.write_all(&self.object_id_size.to_be_bytes())?;
@@ -403,24 +394,13 @@ impl IdSizesResponse {
     w.write_all(&self.frame_id_size.to_be_bytes())?;
     Ok(())
   }
-  pub fn read_from<R: Read>(r: &mut R) -> Result<Self, std::io::Error> {
-    let mut buf = [0u8; 4];
-    r.read_exact(&mut buf)?;
-    let field_id_size = u32::from_be_bytes(buf);
-    r.read_exact(&mut buf)?;
-    let method_id_size = u32::from_be_bytes(buf);
-    r.read_exact(&mut buf)?;
-    let object_id_size = u32::from_be_bytes(buf);
-    r.read_exact(&mut buf)?;
-    let reference_id_size = u32::from_be_bytes(buf);
-    r.read_exact(&mut buf)?;
-    let frame_id_size = u32::from_be_bytes(buf);
+  fn read_from<R: Read>(r: &mut R, _c: &JDWPContext) -> Result<Self, std::io::Error> {
     Ok(IdSizesResponse {
-      field_id_size,
-      method_id_size,
-      object_id_size,
-      reference_id_size,
-      frame_id_size,
+      field_id_size: i32::read_from(r, _c)?,
+      method_id_size: i32::read_from(r, _c)?,
+      object_id_size: i32::read_from(r, _c)?,
+      reference_id_size: i32::read_from(r, _c)?,
+      frame_id_size: i32::read_from(r, _c)?,
     })
   }
 }
