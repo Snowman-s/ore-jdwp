@@ -3,6 +3,11 @@ use std::{
   io::{Read, Write},
 };
 
+use tokio::io::AsyncRead;
+use tokio::io::AsyncReadExt;
+use tokio::io::AsyncWrite;
+use tokio::io::AsyncWriteExt;
+
 pub use crate::defs::*;
 
 #[derive(Debug, Clone)]
@@ -105,12 +110,12 @@ macro_rules! jdwp_command_map {
     pub fn int_repr_to_responce_to(
       cmd: &JDWPCommandPayload,
       data: &Vec<u8>,
-      con: JDWPContext,
+      con: &JDWPContext,
     ) -> Option<JDWPCommandResponse> {
       let mut cursor = std::io::Cursor::new(data);
       match cmd {
         $(JDWPCommandPayload::$name(_) => {
-          <$response>::read_from(&mut cursor, &con).ok().map(JDWPCommandResponse::$name)
+          <$response>::read_from(&mut cursor, con).ok().map(JDWPCommandResponse::$name)
         }),*
       }
     }
@@ -219,16 +224,18 @@ pub struct JDWPReplyPacket {
   pub data: JDWPCommandResponse,
 }
 
-pub fn send_packet<W: Write>(
+pub async fn send_packet<W: AsyncWrite + Unpin>(
   stream: &mut W,
   id: i32,
   cmd: &JDWPCommandPayload,
 ) -> Result<(), std::io::Error> {
   if let Some(data) = payload_to_int_repr(cmd) {
-    stream.write_all(&(11 - 2 + data.len() as i32).to_be_bytes())?; // Placeholder for length
-    stream.write_all(&id.to_be_bytes())?; // ID
-    stream.write_all(&0_u8.to_be_bytes())?; // Flags
-    stream.write_all(&data)?;
+    stream
+      .write_all(&(11 - 2 + data.len() as i32).to_be_bytes())
+      .await?; // Placeholder for length
+    stream.write_all(&id.to_be_bytes()).await?; // ID
+    stream.write_all(&0_u8.to_be_bytes()).await?; // Flags
+    stream.write_all(&data).await?;
 
     Ok(())
   } else {
@@ -240,25 +247,19 @@ pub fn send_packet<W: Write>(
   }
 }
 
-pub fn receive_packet<R: Read>(
+pub async fn receive_packet<R: AsyncRead + Unpin>(
   reader: &mut R,
   payloads: &[JDWPCommandPayload],
-  context: JDWPContext,
+  context: &JDWPContext,
 ) -> Option<JDWPReplyPacket> {
-  let length = i32::read_from(reader, &context).ok()?;
-  let id = i32::read_from(reader, &context).ok()?;
-
-  let mut flags_bytes = [0; 1];
-  reader.read_exact(&mut flags_bytes).ok()?;
-  let flags = flags_bytes[0];
-
-  let mut error_code_bytes = [0; 2];
-  reader.read_exact(&mut error_code_bytes).ok()?;
-  let error_code = u16::from_be_bytes(error_code_bytes);
+  let length = reader.read_i32().await.ok()?;
+  let id = reader.read_i32().await.ok()?;
+  let flags = reader.read_u8().await.ok()?;
+  let error_code = reader.read_u16().await.ok()?;
 
   let remain_packet: Vec<u8> = {
     let mut buf = vec![0; (length - 11) as usize];
-    reader.read_exact(&mut buf).ok()?;
+    reader.read_exact(&mut buf).await.ok()?;
     buf
   };
 

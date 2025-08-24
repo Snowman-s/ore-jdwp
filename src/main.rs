@@ -1,9 +1,15 @@
-use clap::Parser;
-use std::io::{Read, Write};
-use std::net::TcpStream;
+use std::io::Read;
+use std::io::Write;
+use std::sync::Arc;
 
-use crate::defs::VirtualMachineClassesBySignatureOut;
-use crate::packets::{JDWPCommandResponse, NoData, receive_packet, send_packet};
+use tokio::io::AsyncReadExt;
+use tokio::io::AsyncWriteExt;
+use tokio::net::TcpStream;
+
+use crate::packets::NoData;
+use crate::packets::{JDWPCommandPayload, JDWPCommandResponse, receive_packet, send_packet};
+use clap::Parser;
+use futures_util::lock::Mutex;
 
 mod defs;
 mod packets;
@@ -20,67 +26,89 @@ struct Args {
   port: String,
 }
 
-fn main() {
-  let mut buffer: Vec<u8> = vec![];
-
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
   let args = Args::parse();
   let addr = format!("{}:{}", args.host, args.port);
 
-  let mut stream = TcpStream::connect(addr).unwrap();
-  // まず JDWP-Handshake を送る
-  stream.write_all(b"JDWP-Handshake").unwrap();
-  stream.flush().unwrap();
+  let mut stream = TcpStream::connect(addr.clone()).await?;
+  println!("Connected to {}", addr);
 
-  // サーバーからも同じ応答が返る
-  buffer.resize(14, 0);
-  stream.read_exact(&mut buffer).unwrap();
+  let payloads: Arc<Mutex<Vec<JDWPCommandPayload>>> = Arc::new(Mutex::new(Vec::new()));
+  let context = Arc::new(Mutex::new(packets::JDWPContext {
+    field_id_size: Option::None,
+    method_id_size: Option::None,
+    object_id_size: Option::None,
+    reference_type_id_size: Option::None,
+    frame_id_size: Option::None,
+  }));
 
-  if buffer != *b"JDWP-Handshake" {
-    eprintln!("Unexpected response: {:?}", buffer);
-    panic!();
+  // --- Handshake ---
+  let handshake = b"JDWP-Handshake";
+  stream.write_all(handshake).await?;
+  stream.flush().await?;
+  println!("Sent handshake: {:?}", String::from_utf8_lossy(handshake));
+
+  // 応答を読む（同期的に一度読む）
+  let mut buf = [0u8; 14];
+  stream.read_exact(&mut buf).await?;
+  if &buf != b"JDWP-Handshake" {
+    eprintln!("Invalid handshake response");
+    return Err(Box::from("Invalid handshake response"));
   }
-
   println!("Handshake successful!");
 
-  let mut payloads: Vec<packets::JDWPCommandPayload> = Vec::new();
-  let mut context: packets::JDWPContext = packets::JDWPContext {
-    field_id_size: None,
-    method_id_size: None,
-    object_id_size: None,
-    reference_type_id_size: None,
-    frame_id_size: None,
-  };
+  // --- ここから非同期で送受信を分離 ---
+  let (mut reader, mut writer) = stream.into_split();
 
-  let p = packets::JDWPCommandPayload::VirtualMachineVersion(NoData {});
-  payloads.push(p.clone());
-  send_packet(&mut stream, (payloads.len() - 1) as i32, &p).unwrap();
-  println!("Send version command");
-  let received = receive_packet(&mut stream, &payloads, context.clone()).unwrap();
-  println!("Received packet: {:?}", received);
+  // Clone Arcs for each task
+  let payloads_recv = Arc::clone(&payloads);
+  let context_recv = Arc::clone(&context);
+  let payloads_send = Arc::clone(&payloads);
 
-  let p = packets::JDWPCommandPayload::VirtualMachineIDSizes(NoData {});
-  payloads.push(p.clone());
-  send_packet(&mut stream, (payloads.len() - 1) as i32, &p).unwrap();
-  println!("Send id_sizes command");
-  let received = receive_packet(&mut stream, &payloads, context.clone()).unwrap();
-  println!("Received packet: {:?}", received);
-  let JDWPCommandResponse::VirtualMachineIDSizes(data) = received.data else {
-    panic!("Expected id_sizes response");
-  };
-  context.set_from_id_sizes_response(&data);
+  // 受信タスク
+  let recv_task = tokio::spawn(async move {
+    let mut buf = [0u8; 1024];
+    loop {
+      match reader.read(&mut buf).await {
+        Ok(0) => {
+          println!("Connection closed by peer");
+          break;
+        }
+        Ok(n) => {
+          // Await the async receive_packet function
+          let received = packets::receive_packet(
+            &mut &buf[..n],
+            &payloads_recv.lock().await,
+            &*context_recv.lock().await,
+          )
+          .await;
 
-  let p = packets::JDWPCommandPayload::VirtualMachineClassesBySignature(
-    VirtualMachineClassesBySignatureOut {
-      signature: "Ljava/lang/String;".into(),
-    },
-  );
-  payloads.push(p.clone());
-  send_packet(&mut stream, (payloads.len() - 1) as i32, &p).unwrap();
-  println!("Send classes_by_signature command");
-  let received = receive_packet(&mut stream, &payloads, context.clone()).unwrap();
-  println!("Received packet: {:?}", received);
-  let JDWPCommandResponse::VirtualMachineClassesBySignature(data) = received.data else {
-    panic!("Expected classes_by_signature response");
-  };
-  println!("Classes by signature: {:?}", data);
+          println!("Received packet: {:?}", received);
+        }
+        Err(e) => {
+          eprintln!("Read error: {:?}", e);
+          break;
+        }
+      }
+    }
+  });
+
+  // 送信タスク
+  let send_task = tokio::spawn(async move {
+    // バージョン情報を得たい
+    let payload = JDWPCommandPayload::VirtualMachineVersion(NoData {});
+    let id = {
+      let mut locked = payloads_send.lock().await;
+      locked.push(payload.clone());
+      locked.len() as i32 - 1
+    };
+    packets::send_packet(&mut writer, id, &payload.clone())
+      .await
+      .unwrap();
+    println!("Sent version request");
+  });
+
+  tokio::try_join!(recv_task, send_task)?;
+  Ok(())
 }
