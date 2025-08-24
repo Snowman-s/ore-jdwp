@@ -2,8 +2,10 @@ use clap::Parser;
 use std::io::{Read, Write};
 use std::net::TcpStream;
 
+use crate::defs::VirtualMachineClassesBySignatureOut;
 use crate::packets::{JDWPCommandResponse, NoData, receive_packet, send_packet};
 
+mod defs;
 mod packets;
 
 #[derive(Parser, Debug)]
@@ -45,35 +47,39 @@ fn main() {
     field_id_size: None,
     method_id_size: None,
     object_id_size: None,
-    reference_id_size: None,
+    reference_type_id_size: None,
     frame_id_size: None,
   };
 
-  let p = packets::JDWPCommandPayload::Version(NoData {});
+  let p = packets::JDWPCommandPayload::VirtualMachineVersion(NoData {});
   payloads.push(p.clone());
   send_packet(&mut stream, (payloads.len() - 1) as i32, &p).unwrap();
   println!("Send version command");
   let received = receive_packet(&mut stream, &payloads, context.clone()).unwrap();
   println!("Received packet: {:?}", received);
 
-  let p = packets::JDWPCommandPayload::IdSizes(NoData {});
+  let p = packets::JDWPCommandPayload::VirtualMachineIDSizes(NoData {});
   payloads.push(p.clone());
   send_packet(&mut stream, (payloads.len() - 1) as i32, &p).unwrap();
   println!("Send id_sizes command");
   let received = receive_packet(&mut stream, &payloads, context.clone()).unwrap();
   println!("Received packet: {:?}", received);
-  let JDWPCommandResponse::IdSizes(data) = received.data else {
+  let JDWPCommandResponse::VirtualMachineIDSizes(data) = received.data else {
     panic!("Expected id_sizes response");
   };
   context.set_from_id_sizes_response(&data);
 
-  let p = packets::JDWPCommandPayload::ClassesBySignature("Ljava/lang/String;".into());
+  let p = packets::JDWPCommandPayload::VirtualMachineClassesBySignature(
+    VirtualMachineClassesBySignatureOut {
+      signature: "Ljava/lang/String;".into(),
+    },
+  );
   payloads.push(p.clone());
   send_packet(&mut stream, (payloads.len() - 1) as i32, &p).unwrap();
   println!("Send classes_by_signature command");
   let received = receive_packet(&mut stream, &payloads, context.clone()).unwrap();
   println!("Received packet: {:?}", received);
-  let JDWPCommandResponse::ClassesBySignature(data) = received.data else {
+  let JDWPCommandResponse::VirtualMachineClassesBySignature(data) = received.data else {
     panic!("Expected classes_by_signature response");
   };
   println!("Classes by signature: {:?}", data);

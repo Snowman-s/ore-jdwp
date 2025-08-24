@@ -2,3 +2,5 @@
 *.class
 
 tool/jdwp-protocol.html
+tool/jdwp_command_map.txt
+tool/defs.rs
