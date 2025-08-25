@@ -3,7 +3,7 @@ use crate::packets::*;
 use std::io::{Read, Write};
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct VirtualMachineVersionResponse {
+pub struct VirtualMachineVersionReceive {
   /* Text information on the VM version */
   pub description: JDWPString,
   /* Major JDWP Version number */
@@ -16,7 +16,7 @@ pub struct VirtualMachineVersionResponse {
   pub vm_name: JDWPString,
 }
 
-impl PacketData for VirtualMachineVersionResponse {
+impl PacketData for VirtualMachineVersionReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.description.write_to(writer)?;
     self.jdwp_major.write_to(writer)?;
@@ -32,7 +32,7 @@ impl PacketData for VirtualMachineVersionResponse {
     let jdwp_minor = i32::read_from(reader, c)?;
     let vm_version = JDWPString::read_from(reader, c)?;
     let vm_name = JDWPString::read_from(reader, c)?;
-    Ok(VirtualMachineVersionResponse {
+    Ok(VirtualMachineVersionReceive {
       description,
       jdwp_major,
       jdwp_minor,
@@ -42,12 +42,12 @@ impl PacketData for VirtualMachineVersionResponse {
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct VirtualMachineClassesBySignatureOut {
+pub struct VirtualMachineClassesBySignatureSend {
   /* JNI signature of the class to find (for example, "Ljava/lang/String;"). */
   pub signature: JDWPString,
 }
 
-impl PacketData for VirtualMachineClassesBySignatureOut {
+impl PacketData for VirtualMachineClassesBySignatureSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.signature.write_to(writer)?;
     Ok(())
@@ -55,11 +55,11 @@ impl PacketData for VirtualMachineClassesBySignatureOut {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let signature = JDWPString::read_from(reader, c)?;
-    Ok(VirtualMachineClassesBySignatureOut { signature })
+    Ok(VirtualMachineClassesBySignatureSend { signature })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct VirtualMachineClassesBySignatureResponseClassesRepeated {
+pub struct VirtualMachineClassesBySignatureReceiveClassesRepeated {
   /* Kind of following reference type. */
   pub ref_type_tag: i8,
   /* Matching loaded reference type */
@@ -68,7 +68,7 @@ pub struct VirtualMachineClassesBySignatureResponseClassesRepeated {
   pub status: i32,
 }
 
-impl PacketData for VirtualMachineClassesBySignatureResponseClassesRepeated {
+impl PacketData for VirtualMachineClassesBySignatureReceiveClassesRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.ref_type_tag.write_to(writer)?;
     self.type_id.write_to(writer)?;
@@ -80,7 +80,7 @@ impl PacketData for VirtualMachineClassesBySignatureResponseClassesRepeated {
     let ref_type_tag = i8::read_from(reader, c)?;
     let type_id = JDWPIDLengthEqReferenceType::read_from(reader, c)?;
     let status = i32::read_from(reader, c)?;
-    Ok(VirtualMachineClassesBySignatureResponseClassesRepeated {
+    Ok(VirtualMachineClassesBySignatureReceiveClassesRepeated {
       ref_type_tag,
       type_id,
       status,
@@ -89,14 +89,14 @@ impl PacketData for VirtualMachineClassesBySignatureResponseClassesRepeated {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct VirtualMachineClassesBySignatureResponse {
+pub struct VirtualMachineClassesBySignatureReceive {
   /* Number of reference types that follow. */
   pub classes: i32,
   /* Repeated classes times: */
-  pub classes_repeated: Vec<VirtualMachineClassesBySignatureResponseClassesRepeated>,
+  pub classes_repeated: Vec<VirtualMachineClassesBySignatureReceiveClassesRepeated>,
 }
 
-impl PacketData for VirtualMachineClassesBySignatureResponse {
+impl PacketData for VirtualMachineClassesBySignatureReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.classes.write_to(writer)?;
     for item in &self.classes_repeated {
@@ -110,16 +110,16 @@ impl PacketData for VirtualMachineClassesBySignatureResponse {
     let mut classes_repeated = Vec::new();
     for _ in 0..classes {
       classes_repeated
-        .push(VirtualMachineClassesBySignatureResponseClassesRepeated::read_from(reader, c)?);
+        .push(VirtualMachineClassesBySignatureReceiveClassesRepeated::read_from(reader, c)?);
     }
-    Ok(VirtualMachineClassesBySignatureResponse {
+    Ok(VirtualMachineClassesBySignatureReceive {
       classes,
       classes_repeated,
     })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct VirtualMachineAllClassesResponseClassesRepeated {
+pub struct VirtualMachineAllClassesReceiveClassesRepeated {
   /* Kind of following reference type. */
   pub ref_type_tag: i8,
   /* Loaded reference type */
@@ -130,7 +130,7 @@ pub struct VirtualMachineAllClassesResponseClassesRepeated {
   pub status: i32,
 }
 
-impl PacketData for VirtualMachineAllClassesResponseClassesRepeated {
+impl PacketData for VirtualMachineAllClassesReceiveClassesRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.ref_type_tag.write_to(writer)?;
     self.type_id.write_to(writer)?;
@@ -144,7 +144,7 @@ impl PacketData for VirtualMachineAllClassesResponseClassesRepeated {
     let type_id = JDWPIDLengthEqReferenceType::read_from(reader, c)?;
     let signature = JDWPString::read_from(reader, c)?;
     let status = i32::read_from(reader, c)?;
-    Ok(VirtualMachineAllClassesResponseClassesRepeated {
+    Ok(VirtualMachineAllClassesReceiveClassesRepeated {
       ref_type_tag,
       type_id,
       signature,
@@ -154,14 +154,14 @@ impl PacketData for VirtualMachineAllClassesResponseClassesRepeated {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct VirtualMachineAllClassesResponse {
+pub struct VirtualMachineAllClassesReceive {
   /* Number of reference types that follow. */
   pub classes: i32,
   /* Repeated classes times: */
-  pub classes_repeated: Vec<VirtualMachineAllClassesResponseClassesRepeated>,
+  pub classes_repeated: Vec<VirtualMachineAllClassesReceiveClassesRepeated>,
 }
 
-impl PacketData for VirtualMachineAllClassesResponse {
+impl PacketData for VirtualMachineAllClassesReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.classes.write_to(writer)?;
     for item in &self.classes_repeated {
@@ -174,23 +174,23 @@ impl PacketData for VirtualMachineAllClassesResponse {
     let classes = i32::read_from(reader, c)?;
     let mut classes_repeated = Vec::new();
     for _ in 0..classes {
-      classes_repeated.push(VirtualMachineAllClassesResponseClassesRepeated::read_from(
+      classes_repeated.push(VirtualMachineAllClassesReceiveClassesRepeated::read_from(
         reader, c,
       )?);
     }
-    Ok(VirtualMachineAllClassesResponse {
+    Ok(VirtualMachineAllClassesReceive {
       classes,
       classes_repeated,
     })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct VirtualMachineAllThreadsResponseThreadsRepeated {
+pub struct VirtualMachineAllThreadsReceiveThreadsRepeated {
   /* A running thread */
   pub thread: JDWPIDLengthEqObject,
 }
 
-impl PacketData for VirtualMachineAllThreadsResponseThreadsRepeated {
+impl PacketData for VirtualMachineAllThreadsReceiveThreadsRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.thread.write_to(writer)?;
     Ok(())
@@ -198,19 +198,19 @@ impl PacketData for VirtualMachineAllThreadsResponseThreadsRepeated {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let thread = JDWPIDLengthEqObject::read_from(reader, c)?;
-    Ok(VirtualMachineAllThreadsResponseThreadsRepeated { thread })
+    Ok(VirtualMachineAllThreadsReceiveThreadsRepeated { thread })
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct VirtualMachineAllThreadsResponse {
+pub struct VirtualMachineAllThreadsReceive {
   /* Number of threads that follow. */
   pub threads: i32,
   /* Repeated threads times: */
-  pub threads_repeated: Vec<VirtualMachineAllThreadsResponseThreadsRepeated>,
+  pub threads_repeated: Vec<VirtualMachineAllThreadsReceiveThreadsRepeated>,
 }
 
-impl PacketData for VirtualMachineAllThreadsResponse {
+impl PacketData for VirtualMachineAllThreadsReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.threads.write_to(writer)?;
     for item in &self.threads_repeated {
@@ -223,23 +223,23 @@ impl PacketData for VirtualMachineAllThreadsResponse {
     let threads = i32::read_from(reader, c)?;
     let mut threads_repeated = Vec::new();
     for _ in 0..threads {
-      threads_repeated.push(VirtualMachineAllThreadsResponseThreadsRepeated::read_from(
+      threads_repeated.push(VirtualMachineAllThreadsReceiveThreadsRepeated::read_from(
         reader, c,
       )?);
     }
-    Ok(VirtualMachineAllThreadsResponse {
+    Ok(VirtualMachineAllThreadsReceive {
       threads,
       threads_repeated,
     })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct VirtualMachineTopLevelThreadGroupsResponseGroupsRepeated {
+pub struct VirtualMachineTopLevelThreadGroupsReceiveGroupsRepeated {
   /* A top level thread group */
   pub group: JDWPIDLengthEqObject,
 }
 
-impl PacketData for VirtualMachineTopLevelThreadGroupsResponseGroupsRepeated {
+impl PacketData for VirtualMachineTopLevelThreadGroupsReceiveGroupsRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.group.write_to(writer)?;
     Ok(())
@@ -247,19 +247,19 @@ impl PacketData for VirtualMachineTopLevelThreadGroupsResponseGroupsRepeated {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let group = JDWPIDLengthEqObject::read_from(reader, c)?;
-    Ok(VirtualMachineTopLevelThreadGroupsResponseGroupsRepeated { group })
+    Ok(VirtualMachineTopLevelThreadGroupsReceiveGroupsRepeated { group })
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct VirtualMachineTopLevelThreadGroupsResponse {
+pub struct VirtualMachineTopLevelThreadGroupsReceive {
   /* Number of thread groups that follow. */
   pub groups: i32,
   /* Repeated groups times: */
-  pub groups_repeated: Vec<VirtualMachineTopLevelThreadGroupsResponseGroupsRepeated>,
+  pub groups_repeated: Vec<VirtualMachineTopLevelThreadGroupsReceiveGroupsRepeated>,
 }
 
-impl PacketData for VirtualMachineTopLevelThreadGroupsResponse {
+impl PacketData for VirtualMachineTopLevelThreadGroupsReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.groups.write_to(writer)?;
     for item in &self.groups_repeated {
@@ -273,16 +273,16 @@ impl PacketData for VirtualMachineTopLevelThreadGroupsResponse {
     let mut groups_repeated = Vec::new();
     for _ in 0..groups {
       groups_repeated
-        .push(VirtualMachineTopLevelThreadGroupsResponseGroupsRepeated::read_from(reader, c)?);
+        .push(VirtualMachineTopLevelThreadGroupsReceiveGroupsRepeated::read_from(reader, c)?);
     }
-    Ok(VirtualMachineTopLevelThreadGroupsResponse {
+    Ok(VirtualMachineTopLevelThreadGroupsReceive {
       groups,
       groups_repeated,
     })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct VirtualMachineIDSizesResponse {
+pub struct VirtualMachineIDSizesReceive {
   /* fieldID size in bytes */
   pub field_idsize: i32,
   /* methodID size in bytes */
@@ -295,7 +295,7 @@ pub struct VirtualMachineIDSizesResponse {
   pub frame_idsize: i32,
 }
 
-impl PacketData for VirtualMachineIDSizesResponse {
+impl PacketData for VirtualMachineIDSizesReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.field_idsize.write_to(writer)?;
     self.method_idsize.write_to(writer)?;
@@ -311,7 +311,7 @@ impl PacketData for VirtualMachineIDSizesResponse {
     let object_idsize = i32::read_from(reader, c)?;
     let reference_type_idsize = i32::read_from(reader, c)?;
     let frame_idsize = i32::read_from(reader, c)?;
-    Ok(VirtualMachineIDSizesResponse {
+    Ok(VirtualMachineIDSizesReceive {
       field_idsize,
       method_idsize,
       object_idsize,
@@ -321,12 +321,12 @@ impl PacketData for VirtualMachineIDSizesResponse {
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct VirtualMachineExitOut {
+pub struct VirtualMachineExitSend {
   /* the exit code */
   pub exit_code: i32,
 }
 
-impl PacketData for VirtualMachineExitOut {
+impl PacketData for VirtualMachineExitSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.exit_code.write_to(writer)?;
     Ok(())
@@ -334,16 +334,16 @@ impl PacketData for VirtualMachineExitOut {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let exit_code = i32::read_from(reader, c)?;
-    Ok(VirtualMachineExitOut { exit_code })
+    Ok(VirtualMachineExitSend { exit_code })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct VirtualMachineCreateStringOut {
+pub struct VirtualMachineCreateStringSend {
   /* UTF-8 characters to use in the created string. */
   pub utf: JDWPString,
 }
 
-impl PacketData for VirtualMachineCreateStringOut {
+impl PacketData for VirtualMachineCreateStringSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.utf.write_to(writer)?;
     Ok(())
@@ -351,16 +351,16 @@ impl PacketData for VirtualMachineCreateStringOut {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let utf = JDWPString::read_from(reader, c)?;
-    Ok(VirtualMachineCreateStringOut { utf })
+    Ok(VirtualMachineCreateStringSend { utf })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct VirtualMachineCreateStringResponse {
+pub struct VirtualMachineCreateStringReceive {
   /* Created string (instance of java.lang.String) */
   pub string_object: JDWPIDLengthEqObject,
 }
 
-impl PacketData for VirtualMachineCreateStringResponse {
+impl PacketData for VirtualMachineCreateStringReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.string_object.write_to(writer)?;
     Ok(())
@@ -368,11 +368,11 @@ impl PacketData for VirtualMachineCreateStringResponse {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let string_object = JDWPIDLengthEqObject::read_from(reader, c)?;
-    Ok(VirtualMachineCreateStringResponse { string_object })
+    Ok(VirtualMachineCreateStringReceive { string_object })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct VirtualMachineCapabilitiesResponse {
+pub struct VirtualMachineCapabilitiesReceive {
   /* Can the VM watch field modification, and therefore can it send the Modification Watchpoint Event? */
   pub can_watch_field_modification: bool,
   /* Can the VM watch field access, and therefore can it send the Access Watchpoint Event? */
@@ -389,7 +389,7 @@ pub struct VirtualMachineCapabilitiesResponse {
   pub can_get_monitor_info: bool,
 }
 
-impl PacketData for VirtualMachineCapabilitiesResponse {
+impl PacketData for VirtualMachineCapabilitiesReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.can_watch_field_modification.write_to(writer)?;
     self.can_watch_field_access.write_to(writer)?;
@@ -409,7 +409,7 @@ impl PacketData for VirtualMachineCapabilitiesResponse {
     let can_get_owned_monitor_info = bool::read_from(reader, c)?;
     let can_get_current_contended_monitor = bool::read_from(reader, c)?;
     let can_get_monitor_info = bool::read_from(reader, c)?;
-    Ok(VirtualMachineCapabilitiesResponse {
+    Ok(VirtualMachineCapabilitiesReceive {
       can_watch_field_modification,
       can_watch_field_access,
       can_get_bytecodes,
@@ -421,12 +421,12 @@ impl PacketData for VirtualMachineCapabilitiesResponse {
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct VirtualMachineClassPathsResponseClasspathsRepeated {
+pub struct VirtualMachineClassPathsReceiveClasspathsRepeated {
   /* One component of classpath */
   pub path: JDWPString,
 }
 
-impl PacketData for VirtualMachineClassPathsResponseClasspathsRepeated {
+impl PacketData for VirtualMachineClassPathsReceiveClasspathsRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.path.write_to(writer)?;
     Ok(())
@@ -434,17 +434,17 @@ impl PacketData for VirtualMachineClassPathsResponseClasspathsRepeated {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let path = JDWPString::read_from(reader, c)?;
-    Ok(VirtualMachineClassPathsResponseClasspathsRepeated { path })
+    Ok(VirtualMachineClassPathsReceiveClasspathsRepeated { path })
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct VirtualMachineClassPathsResponseBootclasspathsRepeated {
+pub struct VirtualMachineClassPathsReceiveBootclasspathsRepeated {
   /* One component of bootclasspath */
   pub path: JDWPString,
 }
 
-impl PacketData for VirtualMachineClassPathsResponseBootclasspathsRepeated {
+impl PacketData for VirtualMachineClassPathsReceiveBootclasspathsRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.path.write_to(writer)?;
     Ok(())
@@ -452,25 +452,25 @@ impl PacketData for VirtualMachineClassPathsResponseBootclasspathsRepeated {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let path = JDWPString::read_from(reader, c)?;
-    Ok(VirtualMachineClassPathsResponseBootclasspathsRepeated { path })
+    Ok(VirtualMachineClassPathsReceiveBootclasspathsRepeated { path })
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct VirtualMachineClassPathsResponse {
+pub struct VirtualMachineClassPathsReceive {
   /* Base directory used to resolve relative paths in either of the following lists. */
   pub base_dir: JDWPString,
   /* Number of paths in classpath. */
   pub classpaths: i32,
   /* Repeated classpaths times: */
-  pub classpaths_repeated: Vec<VirtualMachineClassPathsResponseClasspathsRepeated>,
+  pub classpaths_repeated: Vec<VirtualMachineClassPathsReceiveClasspathsRepeated>,
   /* Number of paths in bootclasspath. */
   pub bootclasspaths: i32,
   /* Repeated bootclasspaths times: */
-  pub bootclasspaths_repeated: Vec<VirtualMachineClassPathsResponseBootclasspathsRepeated>,
+  pub bootclasspaths_repeated: Vec<VirtualMachineClassPathsReceiveBootclasspathsRepeated>,
 }
 
-impl PacketData for VirtualMachineClassPathsResponse {
+impl PacketData for VirtualMachineClassPathsReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.base_dir.write_to(writer)?;
     self.classpaths.write_to(writer)?;
@@ -490,15 +490,15 @@ impl PacketData for VirtualMachineClassPathsResponse {
     let mut classpaths_repeated = Vec::new();
     for _ in 0..classpaths {
       classpaths_repeated
-        .push(VirtualMachineClassPathsResponseClasspathsRepeated::read_from(reader, c)?);
+        .push(VirtualMachineClassPathsReceiveClasspathsRepeated::read_from(reader, c)?);
     }
     let bootclasspaths = i32::read_from(reader, c)?;
     let mut bootclasspaths_repeated = Vec::new();
     for _ in 0..bootclasspaths {
       bootclasspaths_repeated
-        .push(VirtualMachineClassPathsResponseBootclasspathsRepeated::read_from(reader, c)?);
+        .push(VirtualMachineClassPathsReceiveBootclasspathsRepeated::read_from(reader, c)?);
     }
-    Ok(VirtualMachineClassPathsResponse {
+    Ok(VirtualMachineClassPathsReceive {
       base_dir,
       classpaths,
       classpaths_repeated,
@@ -508,14 +508,14 @@ impl PacketData for VirtualMachineClassPathsResponse {
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct VirtualMachineDisposeObjectsOutRequestsRepeated {
+pub struct VirtualMachineDisposeObjectsSendRequestsRepeated {
   /* The object ID */
   pub object: JDWPIDLengthEqObject,
   /* The number of times this object ID has been part of a packet received from the back-end. An accurate count prevents the object ID from being freed on the back-end if it is part of an incoming packet, not yet handled by the front-end. */
   pub ref_cnt: i32,
 }
 
-impl PacketData for VirtualMachineDisposeObjectsOutRequestsRepeated {
+impl PacketData for VirtualMachineDisposeObjectsSendRequestsRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.object.write_to(writer)?;
     self.ref_cnt.write_to(writer)?;
@@ -525,19 +525,19 @@ impl PacketData for VirtualMachineDisposeObjectsOutRequestsRepeated {
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let object = JDWPIDLengthEqObject::read_from(reader, c)?;
     let ref_cnt = i32::read_from(reader, c)?;
-    Ok(VirtualMachineDisposeObjectsOutRequestsRepeated { object, ref_cnt })
+    Ok(VirtualMachineDisposeObjectsSendRequestsRepeated { object, ref_cnt })
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct VirtualMachineDisposeObjectsOut {
+pub struct VirtualMachineDisposeObjectsSend {
   /* Number of object dispose requests that follow */
   pub requests: i32,
   /* Repeated requests times: */
-  pub requests_repeated: Vec<VirtualMachineDisposeObjectsOutRequestsRepeated>,
+  pub requests_repeated: Vec<VirtualMachineDisposeObjectsSendRequestsRepeated>,
 }
 
-impl PacketData for VirtualMachineDisposeObjectsOut {
+impl PacketData for VirtualMachineDisposeObjectsSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.requests.write_to(writer)?;
     for item in &self.requests_repeated {
@@ -550,18 +550,18 @@ impl PacketData for VirtualMachineDisposeObjectsOut {
     let requests = i32::read_from(reader, c)?;
     let mut requests_repeated = Vec::new();
     for _ in 0..requests {
-      requests_repeated.push(VirtualMachineDisposeObjectsOutRequestsRepeated::read_from(
+      requests_repeated.push(VirtualMachineDisposeObjectsSendRequestsRepeated::read_from(
         reader, c,
       )?);
     }
-    Ok(VirtualMachineDisposeObjectsOut {
+    Ok(VirtualMachineDisposeObjectsSend {
       requests,
       requests_repeated,
     })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct VirtualMachineCapabilitiesNewResponse {
+pub struct VirtualMachineCapabilitiesNewReceive {
   /* Can the VM watch field modification, and therefore can it send the Modification Watchpoint Event? */
   pub can_watch_field_modification: bool,
   /* Can the VM watch field access, and therefore can it send the Access Watchpoint Event? */
@@ -628,7 +628,7 @@ pub struct VirtualMachineCapabilitiesNewResponse {
   pub reserved32: bool,
 }
 
-impl PacketData for VirtualMachineCapabilitiesNewResponse {
+impl PacketData for VirtualMachineCapabilitiesNewReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.can_watch_field_modification.write_to(writer)?;
     self.can_watch_field_access.write_to(writer)?;
@@ -698,7 +698,7 @@ impl PacketData for VirtualMachineCapabilitiesNewResponse {
     let reserved30 = bool::read_from(reader, c)?;
     let reserved31 = bool::read_from(reader, c)?;
     let reserved32 = bool::read_from(reader, c)?;
-    Ok(VirtualMachineCapabilitiesNewResponse {
+    Ok(VirtualMachineCapabilitiesNewReceive {
       can_watch_field_modification,
       can_watch_field_access,
       can_get_bytecodes,
@@ -735,12 +735,12 @@ impl PacketData for VirtualMachineCapabilitiesNewResponse {
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct VirtualMachineRedefineClassesOutClassesRepeatedClassfileRepeated {
+pub struct VirtualMachineRedefineClassesSendClassesRepeatedClassfileRepeated {
   /* byte in JVM class file format. */
   pub classbyte: i8,
 }
 
-impl PacketData for VirtualMachineRedefineClassesOutClassesRepeatedClassfileRepeated {
+impl PacketData for VirtualMachineRedefineClassesSendClassesRepeatedClassfileRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.classbyte.write_to(writer)?;
     Ok(())
@@ -748,21 +748,21 @@ impl PacketData for VirtualMachineRedefineClassesOutClassesRepeatedClassfileRepe
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let classbyte = i8::read_from(reader, c)?;
-    Ok(VirtualMachineRedefineClassesOutClassesRepeatedClassfileRepeated { classbyte })
+    Ok(VirtualMachineRedefineClassesSendClassesRepeatedClassfileRepeated { classbyte })
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct VirtualMachineRedefineClassesOutClassesRepeated {
+pub struct VirtualMachineRedefineClassesSendClassesRepeated {
   /* The reference type. */
   pub ref_type: JDWPIDLengthEqReferenceType,
   /* Number of bytes defining class (below) */
   pub classfile: i32,
   /* Repeated classfile times: */
-  pub classfile_repeated: Vec<VirtualMachineRedefineClassesOutClassesRepeatedClassfileRepeated>,
+  pub classfile_repeated: Vec<VirtualMachineRedefineClassesSendClassesRepeatedClassfileRepeated>,
 }
 
-impl PacketData for VirtualMachineRedefineClassesOutClassesRepeated {
+impl PacketData for VirtualMachineRedefineClassesSendClassesRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.ref_type.write_to(writer)?;
     self.classfile.write_to(writer)?;
@@ -778,10 +778,10 @@ impl PacketData for VirtualMachineRedefineClassesOutClassesRepeated {
     let mut classfile_repeated = Vec::new();
     for _ in 0..classfile {
       classfile_repeated.push(
-        VirtualMachineRedefineClassesOutClassesRepeatedClassfileRepeated::read_from(reader, c)?,
+        VirtualMachineRedefineClassesSendClassesRepeatedClassfileRepeated::read_from(reader, c)?,
       );
     }
-    Ok(VirtualMachineRedefineClassesOutClassesRepeated {
+    Ok(VirtualMachineRedefineClassesSendClassesRepeated {
       ref_type,
       classfile,
       classfile_repeated,
@@ -790,14 +790,14 @@ impl PacketData for VirtualMachineRedefineClassesOutClassesRepeated {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct VirtualMachineRedefineClassesOut {
+pub struct VirtualMachineRedefineClassesSend {
   /* Number of reference types that follow. */
   pub classes: i32,
   /* Repeated classes times: */
-  pub classes_repeated: Vec<VirtualMachineRedefineClassesOutClassesRepeated>,
+  pub classes_repeated: Vec<VirtualMachineRedefineClassesSendClassesRepeated>,
 }
 
-impl PacketData for VirtualMachineRedefineClassesOut {
+impl PacketData for VirtualMachineRedefineClassesSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.classes.write_to(writer)?;
     for item in &self.classes_repeated {
@@ -810,23 +810,23 @@ impl PacketData for VirtualMachineRedefineClassesOut {
     let classes = i32::read_from(reader, c)?;
     let mut classes_repeated = Vec::new();
     for _ in 0..classes {
-      classes_repeated.push(VirtualMachineRedefineClassesOutClassesRepeated::read_from(
+      classes_repeated.push(VirtualMachineRedefineClassesSendClassesRepeated::read_from(
         reader, c,
       )?);
     }
-    Ok(VirtualMachineRedefineClassesOut {
+    Ok(VirtualMachineRedefineClassesSend {
       classes,
       classes_repeated,
     })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct VirtualMachineSetDefaultStratumOut {
+pub struct VirtualMachineSetDefaultStratumSend {
   /* default stratum, or empty string to use reference type default. */
   pub stratum_id: JDWPString,
 }
 
-impl PacketData for VirtualMachineSetDefaultStratumOut {
+impl PacketData for VirtualMachineSetDefaultStratumSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.stratum_id.write_to(writer)?;
     Ok(())
@@ -834,11 +834,11 @@ impl PacketData for VirtualMachineSetDefaultStratumOut {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let stratum_id = JDWPString::read_from(reader, c)?;
-    Ok(VirtualMachineSetDefaultStratumOut { stratum_id })
+    Ok(VirtualMachineSetDefaultStratumSend { stratum_id })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct VirtualMachineAllClassesWithGenericResponseClassesRepeated {
+pub struct VirtualMachineAllClassesWithGenericReceiveClassesRepeated {
   /* Kind of following reference type. */
   pub ref_type_tag: i8,
   /* Loaded reference type */
@@ -851,7 +851,7 @@ pub struct VirtualMachineAllClassesWithGenericResponseClassesRepeated {
   pub status: i32,
 }
 
-impl PacketData for VirtualMachineAllClassesWithGenericResponseClassesRepeated {
+impl PacketData for VirtualMachineAllClassesWithGenericReceiveClassesRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.ref_type_tag.write_to(writer)?;
     self.type_id.write_to(writer)?;
@@ -867,7 +867,7 @@ impl PacketData for VirtualMachineAllClassesWithGenericResponseClassesRepeated {
     let signature = JDWPString::read_from(reader, c)?;
     let generic_signature = JDWPString::read_from(reader, c)?;
     let status = i32::read_from(reader, c)?;
-    Ok(VirtualMachineAllClassesWithGenericResponseClassesRepeated {
+    Ok(VirtualMachineAllClassesWithGenericReceiveClassesRepeated {
       ref_type_tag,
       type_id,
       signature,
@@ -878,14 +878,14 @@ impl PacketData for VirtualMachineAllClassesWithGenericResponseClassesRepeated {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct VirtualMachineAllClassesWithGenericResponse {
+pub struct VirtualMachineAllClassesWithGenericReceive {
   /* Number of reference types that follow. */
   pub classes: i32,
   /* Repeated classes times: */
-  pub classes_repeated: Vec<VirtualMachineAllClassesWithGenericResponseClassesRepeated>,
+  pub classes_repeated: Vec<VirtualMachineAllClassesWithGenericReceiveClassesRepeated>,
 }
 
-impl PacketData for VirtualMachineAllClassesWithGenericResponse {
+impl PacketData for VirtualMachineAllClassesWithGenericReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.classes.write_to(writer)?;
     for item in &self.classes_repeated {
@@ -899,21 +899,21 @@ impl PacketData for VirtualMachineAllClassesWithGenericResponse {
     let mut classes_repeated = Vec::new();
     for _ in 0..classes {
       classes_repeated
-        .push(VirtualMachineAllClassesWithGenericResponseClassesRepeated::read_from(reader, c)?);
+        .push(VirtualMachineAllClassesWithGenericReceiveClassesRepeated::read_from(reader, c)?);
     }
-    Ok(VirtualMachineAllClassesWithGenericResponse {
+    Ok(VirtualMachineAllClassesWithGenericReceive {
       classes,
       classes_repeated,
     })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct VirtualMachineInstanceCountsOutRefTypesCountRepeated {
+pub struct VirtualMachineInstanceCountsSendRefTypesCountRepeated {
   /* A reference type ID. */
   pub ref_type: JDWPIDLengthEqReferenceType,
 }
 
-impl PacketData for VirtualMachineInstanceCountsOutRefTypesCountRepeated {
+impl PacketData for VirtualMachineInstanceCountsSendRefTypesCountRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.ref_type.write_to(writer)?;
     Ok(())
@@ -921,19 +921,19 @@ impl PacketData for VirtualMachineInstanceCountsOutRefTypesCountRepeated {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let ref_type = JDWPIDLengthEqReferenceType::read_from(reader, c)?;
-    Ok(VirtualMachineInstanceCountsOutRefTypesCountRepeated { ref_type })
+    Ok(VirtualMachineInstanceCountsSendRefTypesCountRepeated { ref_type })
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct VirtualMachineInstanceCountsOut {
+pub struct VirtualMachineInstanceCountsSend {
   /* Number of reference types that follow.    Must be non-negative. */
   pub ref_types_count: i32,
   /* Repeated refTypesCount times: */
-  pub ref_types_count_repeated: Vec<VirtualMachineInstanceCountsOutRefTypesCountRepeated>,
+  pub ref_types_count_repeated: Vec<VirtualMachineInstanceCountsSendRefTypesCountRepeated>,
 }
 
-impl PacketData for VirtualMachineInstanceCountsOut {
+impl PacketData for VirtualMachineInstanceCountsSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.ref_types_count.write_to(writer)?;
     for item in &self.ref_types_count_repeated {
@@ -947,21 +947,21 @@ impl PacketData for VirtualMachineInstanceCountsOut {
     let mut ref_types_count_repeated = Vec::new();
     for _ in 0..ref_types_count {
       ref_types_count_repeated
-        .push(VirtualMachineInstanceCountsOutRefTypesCountRepeated::read_from(reader, c)?);
+        .push(VirtualMachineInstanceCountsSendRefTypesCountRepeated::read_from(reader, c)?);
     }
-    Ok(VirtualMachineInstanceCountsOut {
+    Ok(VirtualMachineInstanceCountsSend {
       ref_types_count,
       ref_types_count_repeated,
     })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct VirtualMachineInstanceCountsResponseCountsRepeated {
+pub struct VirtualMachineInstanceCountsReceiveCountsRepeated {
   /* The number of instances for the corresponding reference type in 'Out Data'. */
   pub instance_count: i64,
 }
 
-impl PacketData for VirtualMachineInstanceCountsResponseCountsRepeated {
+impl PacketData for VirtualMachineInstanceCountsReceiveCountsRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.instance_count.write_to(writer)?;
     Ok(())
@@ -969,19 +969,19 @@ impl PacketData for VirtualMachineInstanceCountsResponseCountsRepeated {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let instance_count = i64::read_from(reader, c)?;
-    Ok(VirtualMachineInstanceCountsResponseCountsRepeated { instance_count })
+    Ok(VirtualMachineInstanceCountsReceiveCountsRepeated { instance_count })
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct VirtualMachineInstanceCountsResponse {
+pub struct VirtualMachineInstanceCountsReceive {
   /* The number of counts that follow. */
   pub counts: i32,
   /* Repeated counts times: */
-  pub counts_repeated: Vec<VirtualMachineInstanceCountsResponseCountsRepeated>,
+  pub counts_repeated: Vec<VirtualMachineInstanceCountsReceiveCountsRepeated>,
 }
 
-impl PacketData for VirtualMachineInstanceCountsResponse {
+impl PacketData for VirtualMachineInstanceCountsReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.counts.write_to(writer)?;
     for item in &self.counts_repeated {
@@ -995,21 +995,21 @@ impl PacketData for VirtualMachineInstanceCountsResponse {
     let mut counts_repeated = Vec::new();
     for _ in 0..counts {
       counts_repeated
-        .push(VirtualMachineInstanceCountsResponseCountsRepeated::read_from(reader, c)?);
+        .push(VirtualMachineInstanceCountsReceiveCountsRepeated::read_from(reader, c)?);
     }
-    Ok(VirtualMachineInstanceCountsResponse {
+    Ok(VirtualMachineInstanceCountsReceive {
       counts,
       counts_repeated,
     })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ReferenceTypeSignatureOut {
+pub struct ReferenceTypeSignatureSend {
   /* The reference type ID. */
   pub ref_type: JDWPIDLengthEqReferenceType,
 }
 
-impl PacketData for ReferenceTypeSignatureOut {
+impl PacketData for ReferenceTypeSignatureSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.ref_type.write_to(writer)?;
     Ok(())
@@ -1017,16 +1017,16 @@ impl PacketData for ReferenceTypeSignatureOut {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let ref_type = JDWPIDLengthEqReferenceType::read_from(reader, c)?;
-    Ok(ReferenceTypeSignatureOut { ref_type })
+    Ok(ReferenceTypeSignatureSend { ref_type })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ReferenceTypeSignatureResponse {
+pub struct ReferenceTypeSignatureReceive {
   /* The JNI signature for the reference type. */
   pub signature: JDWPString,
 }
 
-impl PacketData for ReferenceTypeSignatureResponse {
+impl PacketData for ReferenceTypeSignatureReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.signature.write_to(writer)?;
     Ok(())
@@ -1034,16 +1034,16 @@ impl PacketData for ReferenceTypeSignatureResponse {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let signature = JDWPString::read_from(reader, c)?;
-    Ok(ReferenceTypeSignatureResponse { signature })
+    Ok(ReferenceTypeSignatureReceive { signature })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ReferenceTypeClassLoaderOut {
+pub struct ReferenceTypeClassLoaderSend {
   /* The reference type ID. */
   pub ref_type: JDWPIDLengthEqReferenceType,
 }
 
-impl PacketData for ReferenceTypeClassLoaderOut {
+impl PacketData for ReferenceTypeClassLoaderSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.ref_type.write_to(writer)?;
     Ok(())
@@ -1051,16 +1051,16 @@ impl PacketData for ReferenceTypeClassLoaderOut {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let ref_type = JDWPIDLengthEqReferenceType::read_from(reader, c)?;
-    Ok(ReferenceTypeClassLoaderOut { ref_type })
+    Ok(ReferenceTypeClassLoaderSend { ref_type })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ReferenceTypeClassLoaderResponse {
+pub struct ReferenceTypeClassLoaderReceive {
   /* The class loader for the reference type. */
   pub class_loader: JDWPIDLengthEqObject,
 }
 
-impl PacketData for ReferenceTypeClassLoaderResponse {
+impl PacketData for ReferenceTypeClassLoaderReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.class_loader.write_to(writer)?;
     Ok(())
@@ -1068,16 +1068,16 @@ impl PacketData for ReferenceTypeClassLoaderResponse {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let class_loader = JDWPIDLengthEqObject::read_from(reader, c)?;
-    Ok(ReferenceTypeClassLoaderResponse { class_loader })
+    Ok(ReferenceTypeClassLoaderReceive { class_loader })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ReferenceTypeModifiersOut {
+pub struct ReferenceTypeModifiersSend {
   /* The reference type ID. */
   pub ref_type: JDWPIDLengthEqReferenceType,
 }
 
-impl PacketData for ReferenceTypeModifiersOut {
+impl PacketData for ReferenceTypeModifiersSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.ref_type.write_to(writer)?;
     Ok(())
@@ -1085,16 +1085,16 @@ impl PacketData for ReferenceTypeModifiersOut {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let ref_type = JDWPIDLengthEqReferenceType::read_from(reader, c)?;
-    Ok(ReferenceTypeModifiersOut { ref_type })
+    Ok(ReferenceTypeModifiersSend { ref_type })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ReferenceTypeModifiersResponse {
+pub struct ReferenceTypeModifiersReceive {
   /* Modifier bits as defined in Chapter 4 of The Java™ Virtual Machine Specification */
   pub mod_bits: i32,
 }
 
-impl PacketData for ReferenceTypeModifiersResponse {
+impl PacketData for ReferenceTypeModifiersReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.mod_bits.write_to(writer)?;
     Ok(())
@@ -1102,16 +1102,16 @@ impl PacketData for ReferenceTypeModifiersResponse {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let mod_bits = i32::read_from(reader, c)?;
-    Ok(ReferenceTypeModifiersResponse { mod_bits })
+    Ok(ReferenceTypeModifiersReceive { mod_bits })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ReferenceTypeFieldsOut {
+pub struct ReferenceTypeFieldsSend {
   /* The reference type ID. */
   pub ref_type: JDWPIDLengthEqReferenceType,
 }
 
-impl PacketData for ReferenceTypeFieldsOut {
+impl PacketData for ReferenceTypeFieldsSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.ref_type.write_to(writer)?;
     Ok(())
@@ -1119,11 +1119,11 @@ impl PacketData for ReferenceTypeFieldsOut {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let ref_type = JDWPIDLengthEqReferenceType::read_from(reader, c)?;
-    Ok(ReferenceTypeFieldsOut { ref_type })
+    Ok(ReferenceTypeFieldsSend { ref_type })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ReferenceTypeFieldsResponseDeclaredRepeated {
+pub struct ReferenceTypeFieldsReceiveDeclaredRepeated {
   /* Field ID. */
   pub field_id: JDWPIDLengthEqField,
   /* Name of field. */
@@ -1134,7 +1134,7 @@ pub struct ReferenceTypeFieldsResponseDeclaredRepeated {
   pub mod_bits: i32,
 }
 
-impl PacketData for ReferenceTypeFieldsResponseDeclaredRepeated {
+impl PacketData for ReferenceTypeFieldsReceiveDeclaredRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.field_id.write_to(writer)?;
     self.name.write_to(writer)?;
@@ -1148,7 +1148,7 @@ impl PacketData for ReferenceTypeFieldsResponseDeclaredRepeated {
     let name = JDWPString::read_from(reader, c)?;
     let signature = JDWPString::read_from(reader, c)?;
     let mod_bits = i32::read_from(reader, c)?;
-    Ok(ReferenceTypeFieldsResponseDeclaredRepeated {
+    Ok(ReferenceTypeFieldsReceiveDeclaredRepeated {
       field_id,
       name,
       signature,
@@ -1158,14 +1158,14 @@ impl PacketData for ReferenceTypeFieldsResponseDeclaredRepeated {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct ReferenceTypeFieldsResponse {
+pub struct ReferenceTypeFieldsReceive {
   /* Number of declared fields. */
   pub declared: i32,
   /* Repeated declared times: */
-  pub declared_repeated: Vec<ReferenceTypeFieldsResponseDeclaredRepeated>,
+  pub declared_repeated: Vec<ReferenceTypeFieldsReceiveDeclaredRepeated>,
 }
 
-impl PacketData for ReferenceTypeFieldsResponse {
+impl PacketData for ReferenceTypeFieldsReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.declared.write_to(writer)?;
     for item in &self.declared_repeated {
@@ -1178,23 +1178,23 @@ impl PacketData for ReferenceTypeFieldsResponse {
     let declared = i32::read_from(reader, c)?;
     let mut declared_repeated = Vec::new();
     for _ in 0..declared {
-      declared_repeated.push(ReferenceTypeFieldsResponseDeclaredRepeated::read_from(
+      declared_repeated.push(ReferenceTypeFieldsReceiveDeclaredRepeated::read_from(
         reader, c,
       )?);
     }
-    Ok(ReferenceTypeFieldsResponse {
+    Ok(ReferenceTypeFieldsReceive {
       declared,
       declared_repeated,
     })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ReferenceTypeMethodsOut {
+pub struct ReferenceTypeMethodsSend {
   /* The reference type ID. */
   pub ref_type: JDWPIDLengthEqReferenceType,
 }
 
-impl PacketData for ReferenceTypeMethodsOut {
+impl PacketData for ReferenceTypeMethodsSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.ref_type.write_to(writer)?;
     Ok(())
@@ -1202,11 +1202,11 @@ impl PacketData for ReferenceTypeMethodsOut {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let ref_type = JDWPIDLengthEqReferenceType::read_from(reader, c)?;
-    Ok(ReferenceTypeMethodsOut { ref_type })
+    Ok(ReferenceTypeMethodsSend { ref_type })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ReferenceTypeMethodsResponseDeclaredRepeated {
+pub struct ReferenceTypeMethodsReceiveDeclaredRepeated {
   /* Method ID. */
   pub method_id: JDWPIDLengthEqMethod,
   /* Name of method. */
@@ -1217,7 +1217,7 @@ pub struct ReferenceTypeMethodsResponseDeclaredRepeated {
   pub mod_bits: i32,
 }
 
-impl PacketData for ReferenceTypeMethodsResponseDeclaredRepeated {
+impl PacketData for ReferenceTypeMethodsReceiveDeclaredRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.method_id.write_to(writer)?;
     self.name.write_to(writer)?;
@@ -1231,7 +1231,7 @@ impl PacketData for ReferenceTypeMethodsResponseDeclaredRepeated {
     let name = JDWPString::read_from(reader, c)?;
     let signature = JDWPString::read_from(reader, c)?;
     let mod_bits = i32::read_from(reader, c)?;
-    Ok(ReferenceTypeMethodsResponseDeclaredRepeated {
+    Ok(ReferenceTypeMethodsReceiveDeclaredRepeated {
       method_id,
       name,
       signature,
@@ -1241,14 +1241,14 @@ impl PacketData for ReferenceTypeMethodsResponseDeclaredRepeated {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct ReferenceTypeMethodsResponse {
+pub struct ReferenceTypeMethodsReceive {
   /* Number of declared methods. */
   pub declared: i32,
   /* Repeated declared times: */
-  pub declared_repeated: Vec<ReferenceTypeMethodsResponseDeclaredRepeated>,
+  pub declared_repeated: Vec<ReferenceTypeMethodsReceiveDeclaredRepeated>,
 }
 
-impl PacketData for ReferenceTypeMethodsResponse {
+impl PacketData for ReferenceTypeMethodsReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.declared.write_to(writer)?;
     for item in &self.declared_repeated {
@@ -1261,23 +1261,23 @@ impl PacketData for ReferenceTypeMethodsResponse {
     let declared = i32::read_from(reader, c)?;
     let mut declared_repeated = Vec::new();
     for _ in 0..declared {
-      declared_repeated.push(ReferenceTypeMethodsResponseDeclaredRepeated::read_from(
+      declared_repeated.push(ReferenceTypeMethodsReceiveDeclaredRepeated::read_from(
         reader, c,
       )?);
     }
-    Ok(ReferenceTypeMethodsResponse {
+    Ok(ReferenceTypeMethodsReceive {
       declared,
       declared_repeated,
     })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ReferenceTypeGetValuesOutFieldsRepeated {
+pub struct ReferenceTypeGetValuesSendFieldsRepeated {
   /* A field to get */
   pub field_id: JDWPIDLengthEqField,
 }
 
-impl PacketData for ReferenceTypeGetValuesOutFieldsRepeated {
+impl PacketData for ReferenceTypeGetValuesSendFieldsRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.field_id.write_to(writer)?;
     Ok(())
@@ -1285,21 +1285,21 @@ impl PacketData for ReferenceTypeGetValuesOutFieldsRepeated {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let field_id = JDWPIDLengthEqField::read_from(reader, c)?;
-    Ok(ReferenceTypeGetValuesOutFieldsRepeated { field_id })
+    Ok(ReferenceTypeGetValuesSendFieldsRepeated { field_id })
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct ReferenceTypeGetValuesOut {
+pub struct ReferenceTypeGetValuesSend {
   /* The reference type ID. */
   pub ref_type: JDWPIDLengthEqReferenceType,
   /* The number of values to get */
   pub fields: i32,
   /* Repeated fields times: */
-  pub fields_repeated: Vec<ReferenceTypeGetValuesOutFieldsRepeated>,
+  pub fields_repeated: Vec<ReferenceTypeGetValuesSendFieldsRepeated>,
 }
 
-impl PacketData for ReferenceTypeGetValuesOut {
+impl PacketData for ReferenceTypeGetValuesSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.ref_type.write_to(writer)?;
     self.fields.write_to(writer)?;
@@ -1314,11 +1314,11 @@ impl PacketData for ReferenceTypeGetValuesOut {
     let fields = i32::read_from(reader, c)?;
     let mut fields_repeated = Vec::new();
     for _ in 0..fields {
-      fields_repeated.push(ReferenceTypeGetValuesOutFieldsRepeated::read_from(
+      fields_repeated.push(ReferenceTypeGetValuesSendFieldsRepeated::read_from(
         reader, c,
       )?);
     }
-    Ok(ReferenceTypeGetValuesOut {
+    Ok(ReferenceTypeGetValuesSend {
       ref_type,
       fields,
       fields_repeated,
@@ -1326,12 +1326,12 @@ impl PacketData for ReferenceTypeGetValuesOut {
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ReferenceTypeGetValuesResponseValuesRepeated {
+pub struct ReferenceTypeGetValuesReceiveValuesRepeated {
   /* The field value */
   pub value: JDWPValue,
 }
 
-impl PacketData for ReferenceTypeGetValuesResponseValuesRepeated {
+impl PacketData for ReferenceTypeGetValuesReceiveValuesRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.value.write_to(writer)?;
     Ok(())
@@ -1339,19 +1339,19 @@ impl PacketData for ReferenceTypeGetValuesResponseValuesRepeated {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let value = JDWPValue::read_from(reader, c)?;
-    Ok(ReferenceTypeGetValuesResponseValuesRepeated { value })
+    Ok(ReferenceTypeGetValuesReceiveValuesRepeated { value })
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct ReferenceTypeGetValuesResponse {
+pub struct ReferenceTypeGetValuesReceive {
   /* The number of values returned, always equal to fields, the number of values to get. */
   pub values: i32,
   /* Repeated values times: */
-  pub values_repeated: Vec<ReferenceTypeGetValuesResponseValuesRepeated>,
+  pub values_repeated: Vec<ReferenceTypeGetValuesReceiveValuesRepeated>,
 }
 
-impl PacketData for ReferenceTypeGetValuesResponse {
+impl PacketData for ReferenceTypeGetValuesReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.values.write_to(writer)?;
     for item in &self.values_repeated {
@@ -1364,23 +1364,23 @@ impl PacketData for ReferenceTypeGetValuesResponse {
     let values = i32::read_from(reader, c)?;
     let mut values_repeated = Vec::new();
     for _ in 0..values {
-      values_repeated.push(ReferenceTypeGetValuesResponseValuesRepeated::read_from(
+      values_repeated.push(ReferenceTypeGetValuesReceiveValuesRepeated::read_from(
         reader, c,
       )?);
     }
-    Ok(ReferenceTypeGetValuesResponse {
+    Ok(ReferenceTypeGetValuesReceive {
       values,
       values_repeated,
     })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ReferenceTypeSourceFileOut {
+pub struct ReferenceTypeSourceFileSend {
   /* The reference type ID. */
   pub ref_type: JDWPIDLengthEqReferenceType,
 }
 
-impl PacketData for ReferenceTypeSourceFileOut {
+impl PacketData for ReferenceTypeSourceFileSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.ref_type.write_to(writer)?;
     Ok(())
@@ -1388,16 +1388,16 @@ impl PacketData for ReferenceTypeSourceFileOut {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let ref_type = JDWPIDLengthEqReferenceType::read_from(reader, c)?;
-    Ok(ReferenceTypeSourceFileOut { ref_type })
+    Ok(ReferenceTypeSourceFileSend { ref_type })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ReferenceTypeSourceFileResponse {
+pub struct ReferenceTypeSourceFileReceive {
   /* The source file name. No path information for the file is included */
   pub source_file: JDWPString,
 }
 
-impl PacketData for ReferenceTypeSourceFileResponse {
+impl PacketData for ReferenceTypeSourceFileReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.source_file.write_to(writer)?;
     Ok(())
@@ -1405,16 +1405,16 @@ impl PacketData for ReferenceTypeSourceFileResponse {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let source_file = JDWPString::read_from(reader, c)?;
-    Ok(ReferenceTypeSourceFileResponse { source_file })
+    Ok(ReferenceTypeSourceFileReceive { source_file })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ReferenceTypeNestedTypesOut {
+pub struct ReferenceTypeNestedTypesSend {
   /* The reference type ID. */
   pub ref_type: JDWPIDLengthEqReferenceType,
 }
 
-impl PacketData for ReferenceTypeNestedTypesOut {
+impl PacketData for ReferenceTypeNestedTypesSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.ref_type.write_to(writer)?;
     Ok(())
@@ -1422,18 +1422,18 @@ impl PacketData for ReferenceTypeNestedTypesOut {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let ref_type = JDWPIDLengthEqReferenceType::read_from(reader, c)?;
-    Ok(ReferenceTypeNestedTypesOut { ref_type })
+    Ok(ReferenceTypeNestedTypesSend { ref_type })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ReferenceTypeNestedTypesResponseClassesRepeated {
+pub struct ReferenceTypeNestedTypesReceiveClassesRepeated {
   /* Kind of following reference type. */
   pub ref_type_tag: i8,
   /* The nested class or interface ID. */
   pub type_id: JDWPIDLengthEqReferenceType,
 }
 
-impl PacketData for ReferenceTypeNestedTypesResponseClassesRepeated {
+impl PacketData for ReferenceTypeNestedTypesReceiveClassesRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.ref_type_tag.write_to(writer)?;
     self.type_id.write_to(writer)?;
@@ -1443,7 +1443,7 @@ impl PacketData for ReferenceTypeNestedTypesResponseClassesRepeated {
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let ref_type_tag = i8::read_from(reader, c)?;
     let type_id = JDWPIDLengthEqReferenceType::read_from(reader, c)?;
-    Ok(ReferenceTypeNestedTypesResponseClassesRepeated {
+    Ok(ReferenceTypeNestedTypesReceiveClassesRepeated {
       ref_type_tag,
       type_id,
     })
@@ -1451,14 +1451,14 @@ impl PacketData for ReferenceTypeNestedTypesResponseClassesRepeated {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct ReferenceTypeNestedTypesResponse {
+pub struct ReferenceTypeNestedTypesReceive {
   /* The number of nested classes and interfaces */
   pub classes: i32,
   /* Repeated classes times: */
-  pub classes_repeated: Vec<ReferenceTypeNestedTypesResponseClassesRepeated>,
+  pub classes_repeated: Vec<ReferenceTypeNestedTypesReceiveClassesRepeated>,
 }
 
-impl PacketData for ReferenceTypeNestedTypesResponse {
+impl PacketData for ReferenceTypeNestedTypesReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.classes.write_to(writer)?;
     for item in &self.classes_repeated {
@@ -1471,23 +1471,23 @@ impl PacketData for ReferenceTypeNestedTypesResponse {
     let classes = i32::read_from(reader, c)?;
     let mut classes_repeated = Vec::new();
     for _ in 0..classes {
-      classes_repeated.push(ReferenceTypeNestedTypesResponseClassesRepeated::read_from(
+      classes_repeated.push(ReferenceTypeNestedTypesReceiveClassesRepeated::read_from(
         reader, c,
       )?);
     }
-    Ok(ReferenceTypeNestedTypesResponse {
+    Ok(ReferenceTypeNestedTypesReceive {
       classes,
       classes_repeated,
     })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ReferenceTypeStatusOut {
+pub struct ReferenceTypeStatusSend {
   /* The reference type ID. */
   pub ref_type: JDWPIDLengthEqReferenceType,
 }
 
-impl PacketData for ReferenceTypeStatusOut {
+impl PacketData for ReferenceTypeStatusSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.ref_type.write_to(writer)?;
     Ok(())
@@ -1495,16 +1495,16 @@ impl PacketData for ReferenceTypeStatusOut {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let ref_type = JDWPIDLengthEqReferenceType::read_from(reader, c)?;
-    Ok(ReferenceTypeStatusOut { ref_type })
+    Ok(ReferenceTypeStatusSend { ref_type })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ReferenceTypeStatusResponse {
+pub struct ReferenceTypeStatusReceive {
   /* Status bits:See JDWP.ClassStatus */
   pub status: i32,
 }
 
-impl PacketData for ReferenceTypeStatusResponse {
+impl PacketData for ReferenceTypeStatusReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.status.write_to(writer)?;
     Ok(())
@@ -1512,16 +1512,16 @@ impl PacketData for ReferenceTypeStatusResponse {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let status = i32::read_from(reader, c)?;
-    Ok(ReferenceTypeStatusResponse { status })
+    Ok(ReferenceTypeStatusReceive { status })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ReferenceTypeInterfacesOut {
+pub struct ReferenceTypeInterfacesSend {
   /* The reference type ID. */
   pub ref_type: JDWPIDLengthEqReferenceType,
 }
 
-impl PacketData for ReferenceTypeInterfacesOut {
+impl PacketData for ReferenceTypeInterfacesSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.ref_type.write_to(writer)?;
     Ok(())
@@ -1529,16 +1529,16 @@ impl PacketData for ReferenceTypeInterfacesOut {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let ref_type = JDWPIDLengthEqReferenceType::read_from(reader, c)?;
-    Ok(ReferenceTypeInterfacesOut { ref_type })
+    Ok(ReferenceTypeInterfacesSend { ref_type })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ReferenceTypeInterfacesResponseInterfacesRepeated {
+pub struct ReferenceTypeInterfacesReceiveInterfacesRepeated {
   /* implemented interface. */
   pub interface_type: JDWPIDLengthEqReferenceType,
 }
 
-impl PacketData for ReferenceTypeInterfacesResponseInterfacesRepeated {
+impl PacketData for ReferenceTypeInterfacesReceiveInterfacesRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.interface_type.write_to(writer)?;
     Ok(())
@@ -1546,19 +1546,19 @@ impl PacketData for ReferenceTypeInterfacesResponseInterfacesRepeated {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let interface_type = JDWPIDLengthEqReferenceType::read_from(reader, c)?;
-    Ok(ReferenceTypeInterfacesResponseInterfacesRepeated { interface_type })
+    Ok(ReferenceTypeInterfacesReceiveInterfacesRepeated { interface_type })
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct ReferenceTypeInterfacesResponse {
+pub struct ReferenceTypeInterfacesReceive {
   /* The number of implemented interfaces */
   pub interfaces: i32,
   /* Repeated interfaces times: */
-  pub interfaces_repeated: Vec<ReferenceTypeInterfacesResponseInterfacesRepeated>,
+  pub interfaces_repeated: Vec<ReferenceTypeInterfacesReceiveInterfacesRepeated>,
 }
 
-impl PacketData for ReferenceTypeInterfacesResponse {
+impl PacketData for ReferenceTypeInterfacesReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.interfaces.write_to(writer)?;
     for item in &self.interfaces_repeated {
@@ -1571,22 +1571,23 @@ impl PacketData for ReferenceTypeInterfacesResponse {
     let interfaces = i32::read_from(reader, c)?;
     let mut interfaces_repeated = Vec::new();
     for _ in 0..interfaces {
-      interfaces_repeated
-        .push(ReferenceTypeInterfacesResponseInterfacesRepeated::read_from(reader, c)?);
+      interfaces_repeated.push(ReferenceTypeInterfacesReceiveInterfacesRepeated::read_from(
+        reader, c,
+      )?);
     }
-    Ok(ReferenceTypeInterfacesResponse {
+    Ok(ReferenceTypeInterfacesReceive {
       interfaces,
       interfaces_repeated,
     })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ReferenceTypeClassObjectOut {
+pub struct ReferenceTypeClassObjectSend {
   /* The reference type ID. */
   pub ref_type: JDWPIDLengthEqReferenceType,
 }
 
-impl PacketData for ReferenceTypeClassObjectOut {
+impl PacketData for ReferenceTypeClassObjectSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.ref_type.write_to(writer)?;
     Ok(())
@@ -1594,16 +1595,16 @@ impl PacketData for ReferenceTypeClassObjectOut {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let ref_type = JDWPIDLengthEqReferenceType::read_from(reader, c)?;
-    Ok(ReferenceTypeClassObjectOut { ref_type })
+    Ok(ReferenceTypeClassObjectSend { ref_type })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ReferenceTypeClassObjectResponse {
+pub struct ReferenceTypeClassObjectReceive {
   /* class object. */
   pub class_object: JDWPIDLengthEqObject,
 }
 
-impl PacketData for ReferenceTypeClassObjectResponse {
+impl PacketData for ReferenceTypeClassObjectReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.class_object.write_to(writer)?;
     Ok(())
@@ -1611,16 +1612,16 @@ impl PacketData for ReferenceTypeClassObjectResponse {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let class_object = JDWPIDLengthEqObject::read_from(reader, c)?;
-    Ok(ReferenceTypeClassObjectResponse { class_object })
+    Ok(ReferenceTypeClassObjectReceive { class_object })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ReferenceTypeSourceDebugExtensionOut {
+pub struct ReferenceTypeSourceDebugExtensionSend {
   /* The reference type ID. */
   pub ref_type: JDWPIDLengthEqReferenceType,
 }
 
-impl PacketData for ReferenceTypeSourceDebugExtensionOut {
+impl PacketData for ReferenceTypeSourceDebugExtensionSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.ref_type.write_to(writer)?;
     Ok(())
@@ -1628,16 +1629,16 @@ impl PacketData for ReferenceTypeSourceDebugExtensionOut {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let ref_type = JDWPIDLengthEqReferenceType::read_from(reader, c)?;
-    Ok(ReferenceTypeSourceDebugExtensionOut { ref_type })
+    Ok(ReferenceTypeSourceDebugExtensionSend { ref_type })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ReferenceTypeSourceDebugExtensionResponse {
+pub struct ReferenceTypeSourceDebugExtensionReceive {
   /* extension attribute */
   pub extension: JDWPString,
 }
 
-impl PacketData for ReferenceTypeSourceDebugExtensionResponse {
+impl PacketData for ReferenceTypeSourceDebugExtensionReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.extension.write_to(writer)?;
     Ok(())
@@ -1645,16 +1646,16 @@ impl PacketData for ReferenceTypeSourceDebugExtensionResponse {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let extension = JDWPString::read_from(reader, c)?;
-    Ok(ReferenceTypeSourceDebugExtensionResponse { extension })
+    Ok(ReferenceTypeSourceDebugExtensionReceive { extension })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ReferenceTypeSignatureWithGenericOut {
+pub struct ReferenceTypeSignatureWithGenericSend {
   /* The reference type ID. */
   pub ref_type: JDWPIDLengthEqReferenceType,
 }
 
-impl PacketData for ReferenceTypeSignatureWithGenericOut {
+impl PacketData for ReferenceTypeSignatureWithGenericSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.ref_type.write_to(writer)?;
     Ok(())
@@ -1662,18 +1663,18 @@ impl PacketData for ReferenceTypeSignatureWithGenericOut {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let ref_type = JDWPIDLengthEqReferenceType::read_from(reader, c)?;
-    Ok(ReferenceTypeSignatureWithGenericOut { ref_type })
+    Ok(ReferenceTypeSignatureWithGenericSend { ref_type })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ReferenceTypeSignatureWithGenericResponse {
+pub struct ReferenceTypeSignatureWithGenericReceive {
   /* The JNI signature for the reference type. */
   pub signature: JDWPString,
   /* The generic signature for the reference type or an empty string if there is none. */
   pub generic_signature: JDWPString,
 }
 
-impl PacketData for ReferenceTypeSignatureWithGenericResponse {
+impl PacketData for ReferenceTypeSignatureWithGenericReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.signature.write_to(writer)?;
     self.generic_signature.write_to(writer)?;
@@ -1683,19 +1684,19 @@ impl PacketData for ReferenceTypeSignatureWithGenericResponse {
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let signature = JDWPString::read_from(reader, c)?;
     let generic_signature = JDWPString::read_from(reader, c)?;
-    Ok(ReferenceTypeSignatureWithGenericResponse {
+    Ok(ReferenceTypeSignatureWithGenericReceive {
       signature,
       generic_signature,
     })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ReferenceTypeFieldsWithGenericOut {
+pub struct ReferenceTypeFieldsWithGenericSend {
   /* The reference type ID. */
   pub ref_type: JDWPIDLengthEqReferenceType,
 }
 
-impl PacketData for ReferenceTypeFieldsWithGenericOut {
+impl PacketData for ReferenceTypeFieldsWithGenericSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.ref_type.write_to(writer)?;
     Ok(())
@@ -1703,11 +1704,11 @@ impl PacketData for ReferenceTypeFieldsWithGenericOut {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let ref_type = JDWPIDLengthEqReferenceType::read_from(reader, c)?;
-    Ok(ReferenceTypeFieldsWithGenericOut { ref_type })
+    Ok(ReferenceTypeFieldsWithGenericSend { ref_type })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ReferenceTypeFieldsWithGenericResponseDeclaredRepeated {
+pub struct ReferenceTypeFieldsWithGenericReceiveDeclaredRepeated {
   /* Field ID. */
   pub field_id: JDWPIDLengthEqField,
   /* The name of the field. */
@@ -1720,7 +1721,7 @@ pub struct ReferenceTypeFieldsWithGenericResponseDeclaredRepeated {
   pub mod_bits: i32,
 }
 
-impl PacketData for ReferenceTypeFieldsWithGenericResponseDeclaredRepeated {
+impl PacketData for ReferenceTypeFieldsWithGenericReceiveDeclaredRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.field_id.write_to(writer)?;
     self.name.write_to(writer)?;
@@ -1736,7 +1737,7 @@ impl PacketData for ReferenceTypeFieldsWithGenericResponseDeclaredRepeated {
     let signature = JDWPString::read_from(reader, c)?;
     let generic_signature = JDWPString::read_from(reader, c)?;
     let mod_bits = i32::read_from(reader, c)?;
-    Ok(ReferenceTypeFieldsWithGenericResponseDeclaredRepeated {
+    Ok(ReferenceTypeFieldsWithGenericReceiveDeclaredRepeated {
       field_id,
       name,
       signature,
@@ -1747,14 +1748,14 @@ impl PacketData for ReferenceTypeFieldsWithGenericResponseDeclaredRepeated {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct ReferenceTypeFieldsWithGenericResponse {
+pub struct ReferenceTypeFieldsWithGenericReceive {
   /* Number of declared fields. */
   pub declared: i32,
   /* Repeated declared times: */
-  pub declared_repeated: Vec<ReferenceTypeFieldsWithGenericResponseDeclaredRepeated>,
+  pub declared_repeated: Vec<ReferenceTypeFieldsWithGenericReceiveDeclaredRepeated>,
 }
 
-impl PacketData for ReferenceTypeFieldsWithGenericResponse {
+impl PacketData for ReferenceTypeFieldsWithGenericReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.declared.write_to(writer)?;
     for item in &self.declared_repeated {
@@ -1768,21 +1769,21 @@ impl PacketData for ReferenceTypeFieldsWithGenericResponse {
     let mut declared_repeated = Vec::new();
     for _ in 0..declared {
       declared_repeated
-        .push(ReferenceTypeFieldsWithGenericResponseDeclaredRepeated::read_from(reader, c)?);
+        .push(ReferenceTypeFieldsWithGenericReceiveDeclaredRepeated::read_from(reader, c)?);
     }
-    Ok(ReferenceTypeFieldsWithGenericResponse {
+    Ok(ReferenceTypeFieldsWithGenericReceive {
       declared,
       declared_repeated,
     })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ReferenceTypeMethodsWithGenericOut {
+pub struct ReferenceTypeMethodsWithGenericSend {
   /* The reference type ID. */
   pub ref_type: JDWPIDLengthEqReferenceType,
 }
 
-impl PacketData for ReferenceTypeMethodsWithGenericOut {
+impl PacketData for ReferenceTypeMethodsWithGenericSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.ref_type.write_to(writer)?;
     Ok(())
@@ -1790,11 +1791,11 @@ impl PacketData for ReferenceTypeMethodsWithGenericOut {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let ref_type = JDWPIDLengthEqReferenceType::read_from(reader, c)?;
-    Ok(ReferenceTypeMethodsWithGenericOut { ref_type })
+    Ok(ReferenceTypeMethodsWithGenericSend { ref_type })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ReferenceTypeMethodsWithGenericResponseDeclaredRepeated {
+pub struct ReferenceTypeMethodsWithGenericReceiveDeclaredRepeated {
   /* Method ID. */
   pub method_id: JDWPIDLengthEqMethod,
   /* The name of the method. */
@@ -1807,7 +1808,7 @@ pub struct ReferenceTypeMethodsWithGenericResponseDeclaredRepeated {
   pub mod_bits: i32,
 }
 
-impl PacketData for ReferenceTypeMethodsWithGenericResponseDeclaredRepeated {
+impl PacketData for ReferenceTypeMethodsWithGenericReceiveDeclaredRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.method_id.write_to(writer)?;
     self.name.write_to(writer)?;
@@ -1823,7 +1824,7 @@ impl PacketData for ReferenceTypeMethodsWithGenericResponseDeclaredRepeated {
     let signature = JDWPString::read_from(reader, c)?;
     let generic_signature = JDWPString::read_from(reader, c)?;
     let mod_bits = i32::read_from(reader, c)?;
-    Ok(ReferenceTypeMethodsWithGenericResponseDeclaredRepeated {
+    Ok(ReferenceTypeMethodsWithGenericReceiveDeclaredRepeated {
       method_id,
       name,
       signature,
@@ -1834,14 +1835,14 @@ impl PacketData for ReferenceTypeMethodsWithGenericResponseDeclaredRepeated {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct ReferenceTypeMethodsWithGenericResponse {
+pub struct ReferenceTypeMethodsWithGenericReceive {
   /* Number of declared methods. */
   pub declared: i32,
   /* Repeated declared times: */
-  pub declared_repeated: Vec<ReferenceTypeMethodsWithGenericResponseDeclaredRepeated>,
+  pub declared_repeated: Vec<ReferenceTypeMethodsWithGenericReceiveDeclaredRepeated>,
 }
 
-impl PacketData for ReferenceTypeMethodsWithGenericResponse {
+impl PacketData for ReferenceTypeMethodsWithGenericReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.declared.write_to(writer)?;
     for item in &self.declared_repeated {
@@ -1855,23 +1856,23 @@ impl PacketData for ReferenceTypeMethodsWithGenericResponse {
     let mut declared_repeated = Vec::new();
     for _ in 0..declared {
       declared_repeated
-        .push(ReferenceTypeMethodsWithGenericResponseDeclaredRepeated::read_from(reader, c)?);
+        .push(ReferenceTypeMethodsWithGenericReceiveDeclaredRepeated::read_from(reader, c)?);
     }
-    Ok(ReferenceTypeMethodsWithGenericResponse {
+    Ok(ReferenceTypeMethodsWithGenericReceive {
       declared,
       declared_repeated,
     })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ReferenceTypeInstancesOut {
+pub struct ReferenceTypeInstancesSend {
   /* The reference type ID. */
   pub ref_type: JDWPIDLengthEqReferenceType,
   /* Maximum number of instances to return.  Must be non-negative. If zero, all instances are returned. */
   pub max_instances: i32,
 }
 
-impl PacketData for ReferenceTypeInstancesOut {
+impl PacketData for ReferenceTypeInstancesSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.ref_type.write_to(writer)?;
     self.max_instances.write_to(writer)?;
@@ -1881,19 +1882,19 @@ impl PacketData for ReferenceTypeInstancesOut {
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let ref_type = JDWPIDLengthEqReferenceType::read_from(reader, c)?;
     let max_instances = i32::read_from(reader, c)?;
-    Ok(ReferenceTypeInstancesOut {
+    Ok(ReferenceTypeInstancesSend {
       ref_type,
       max_instances,
     })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ReferenceTypeInstancesResponseInstancesRepeated {
+pub struct ReferenceTypeInstancesReceiveInstancesRepeated {
   /* An instance of this reference type. */
   pub instance: JDWPTaggedObjectID,
 }
 
-impl PacketData for ReferenceTypeInstancesResponseInstancesRepeated {
+impl PacketData for ReferenceTypeInstancesReceiveInstancesRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.instance.write_to(writer)?;
     Ok(())
@@ -1901,19 +1902,19 @@ impl PacketData for ReferenceTypeInstancesResponseInstancesRepeated {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let instance = JDWPTaggedObjectID::read_from(reader, c)?;
-    Ok(ReferenceTypeInstancesResponseInstancesRepeated { instance })
+    Ok(ReferenceTypeInstancesReceiveInstancesRepeated { instance })
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct ReferenceTypeInstancesResponse {
+pub struct ReferenceTypeInstancesReceive {
   /* The number of instances that follow. */
   pub instances: i32,
   /* Repeated instances times: */
-  pub instances_repeated: Vec<ReferenceTypeInstancesResponseInstancesRepeated>,
+  pub instances_repeated: Vec<ReferenceTypeInstancesReceiveInstancesRepeated>,
 }
 
-impl PacketData for ReferenceTypeInstancesResponse {
+impl PacketData for ReferenceTypeInstancesReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.instances.write_to(writer)?;
     for item in &self.instances_repeated {
@@ -1926,23 +1927,23 @@ impl PacketData for ReferenceTypeInstancesResponse {
     let instances = i32::read_from(reader, c)?;
     let mut instances_repeated = Vec::new();
     for _ in 0..instances {
-      instances_repeated.push(ReferenceTypeInstancesResponseInstancesRepeated::read_from(
+      instances_repeated.push(ReferenceTypeInstancesReceiveInstancesRepeated::read_from(
         reader, c,
       )?);
     }
-    Ok(ReferenceTypeInstancesResponse {
+    Ok(ReferenceTypeInstancesReceive {
       instances,
       instances_repeated,
     })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ReferenceTypeClassFileVersionOut {
+pub struct ReferenceTypeClassFileVersionSend {
   /* The class. */
   pub ref_type: JDWPIDLengthEqReferenceType,
 }
 
-impl PacketData for ReferenceTypeClassFileVersionOut {
+impl PacketData for ReferenceTypeClassFileVersionSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.ref_type.write_to(writer)?;
     Ok(())
@@ -1950,18 +1951,18 @@ impl PacketData for ReferenceTypeClassFileVersionOut {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let ref_type = JDWPIDLengthEqReferenceType::read_from(reader, c)?;
-    Ok(ReferenceTypeClassFileVersionOut { ref_type })
+    Ok(ReferenceTypeClassFileVersionSend { ref_type })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ReferenceTypeClassFileVersionResponse {
+pub struct ReferenceTypeClassFileVersionReceive {
   /* Major version number */
   pub major_version: i32,
   /* Minor version number */
   pub minor_version: i32,
 }
 
-impl PacketData for ReferenceTypeClassFileVersionResponse {
+impl PacketData for ReferenceTypeClassFileVersionReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.major_version.write_to(writer)?;
     self.minor_version.write_to(writer)?;
@@ -1971,19 +1972,19 @@ impl PacketData for ReferenceTypeClassFileVersionResponse {
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let major_version = i32::read_from(reader, c)?;
     let minor_version = i32::read_from(reader, c)?;
-    Ok(ReferenceTypeClassFileVersionResponse {
+    Ok(ReferenceTypeClassFileVersionReceive {
       major_version,
       minor_version,
     })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ReferenceTypeConstantPoolOut {
+pub struct ReferenceTypeConstantPoolSend {
   /* The class. */
   pub ref_type: JDWPIDLengthEqReferenceType,
 }
 
-impl PacketData for ReferenceTypeConstantPoolOut {
+impl PacketData for ReferenceTypeConstantPoolSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.ref_type.write_to(writer)?;
     Ok(())
@@ -1991,16 +1992,16 @@ impl PacketData for ReferenceTypeConstantPoolOut {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let ref_type = JDWPIDLengthEqReferenceType::read_from(reader, c)?;
-    Ok(ReferenceTypeConstantPoolOut { ref_type })
+    Ok(ReferenceTypeConstantPoolSend { ref_type })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ReferenceTypeConstantPoolResponseBytesRepeated {
+pub struct ReferenceTypeConstantPoolReceiveBytesRepeated {
   /* Raw bytes of constant pool */
   pub cpbytes: i8,
 }
 
-impl PacketData for ReferenceTypeConstantPoolResponseBytesRepeated {
+impl PacketData for ReferenceTypeConstantPoolReceiveBytesRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.cpbytes.write_to(writer)?;
     Ok(())
@@ -2008,21 +2009,21 @@ impl PacketData for ReferenceTypeConstantPoolResponseBytesRepeated {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let cpbytes = i8::read_from(reader, c)?;
-    Ok(ReferenceTypeConstantPoolResponseBytesRepeated { cpbytes })
+    Ok(ReferenceTypeConstantPoolReceiveBytesRepeated { cpbytes })
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct ReferenceTypeConstantPoolResponse {
+pub struct ReferenceTypeConstantPoolReceive {
   /* Total number of constant pool entries plus one. This corresponds to the constant_pool_count item of the Class File Format in The Java™ Virtual Machine Specification. */
   pub count: i32,
   /*  */
   pub bytes: i32,
   /* Repeated bytes times: */
-  pub bytes_repeated: Vec<ReferenceTypeConstantPoolResponseBytesRepeated>,
+  pub bytes_repeated: Vec<ReferenceTypeConstantPoolReceiveBytesRepeated>,
 }
 
-impl PacketData for ReferenceTypeConstantPoolResponse {
+impl PacketData for ReferenceTypeConstantPoolReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.count.write_to(writer)?;
     self.bytes.write_to(writer)?;
@@ -2037,11 +2038,11 @@ impl PacketData for ReferenceTypeConstantPoolResponse {
     let bytes = i32::read_from(reader, c)?;
     let mut bytes_repeated = Vec::new();
     for _ in 0..bytes {
-      bytes_repeated.push(ReferenceTypeConstantPoolResponseBytesRepeated::read_from(
+      bytes_repeated.push(ReferenceTypeConstantPoolReceiveBytesRepeated::read_from(
         reader, c,
       )?);
     }
-    Ok(ReferenceTypeConstantPoolResponse {
+    Ok(ReferenceTypeConstantPoolReceive {
       count,
       bytes,
       bytes_repeated,
@@ -2049,12 +2050,12 @@ impl PacketData for ReferenceTypeConstantPoolResponse {
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ClassTypeSuperclassOut {
+pub struct ClassTypeSuperclassSend {
   /* The class type ID. */
   pub clazz: JDWPIDLengthEqReferenceType,
 }
 
-impl PacketData for ClassTypeSuperclassOut {
+impl PacketData for ClassTypeSuperclassSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.clazz.write_to(writer)?;
     Ok(())
@@ -2062,16 +2063,16 @@ impl PacketData for ClassTypeSuperclassOut {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let clazz = JDWPIDLengthEqReferenceType::read_from(reader, c)?;
-    Ok(ClassTypeSuperclassOut { clazz })
+    Ok(ClassTypeSuperclassSend { clazz })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ClassTypeSuperclassResponse {
+pub struct ClassTypeSuperclassReceive {
   /* The superclass (null if the class ID for java.lang.Object is specified). */
   pub superclass: JDWPIDLengthEqReferenceType,
 }
 
-impl PacketData for ClassTypeSuperclassResponse {
+impl PacketData for ClassTypeSuperclassReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.superclass.write_to(writer)?;
     Ok(())
@@ -2079,18 +2080,18 @@ impl PacketData for ClassTypeSuperclassResponse {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let superclass = JDWPIDLengthEqReferenceType::read_from(reader, c)?;
-    Ok(ClassTypeSuperclassResponse { superclass })
+    Ok(ClassTypeSuperclassReceive { superclass })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ClassTypeSetValuesOutValuesRepeated {
+pub struct ClassTypeSetValuesSendValuesRepeated {
   /* Field to set. */
   pub field_id: JDWPIDLengthEqField,
   /* Value to put in the field. */
   pub value: JDWPValue,
 }
 
-impl PacketData for ClassTypeSetValuesOutValuesRepeated {
+impl PacketData for ClassTypeSetValuesSendValuesRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.field_id.write_to(writer)?;
     self.value.write_untagged_to(writer)?;
@@ -2100,21 +2101,21 @@ impl PacketData for ClassTypeSetValuesOutValuesRepeated {
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let field_id = JDWPIDLengthEqField::read_from(reader, c)?;
     let value = JDWPValue::read_from(reader, c)?;
-    Ok(ClassTypeSetValuesOutValuesRepeated { field_id, value })
+    Ok(ClassTypeSetValuesSendValuesRepeated { field_id, value })
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct ClassTypeSetValuesOut {
+pub struct ClassTypeSetValuesSend {
   /* The class type ID. */
   pub clazz: JDWPIDLengthEqReferenceType,
   /* The number of fields to set. */
   pub values: i32,
   /* Repeated values times: */
-  pub values_repeated: Vec<ClassTypeSetValuesOutValuesRepeated>,
+  pub values_repeated: Vec<ClassTypeSetValuesSendValuesRepeated>,
 }
 
-impl PacketData for ClassTypeSetValuesOut {
+impl PacketData for ClassTypeSetValuesSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.clazz.write_to(writer)?;
     self.values.write_to(writer)?;
@@ -2129,9 +2130,9 @@ impl PacketData for ClassTypeSetValuesOut {
     let values = i32::read_from(reader, c)?;
     let mut values_repeated = Vec::new();
     for _ in 0..values {
-      values_repeated.push(ClassTypeSetValuesOutValuesRepeated::read_from(reader, c)?);
+      values_repeated.push(ClassTypeSetValuesSendValuesRepeated::read_from(reader, c)?);
     }
-    Ok(ClassTypeSetValuesOut {
+    Ok(ClassTypeSetValuesSend {
       clazz,
       values,
       values_repeated,
@@ -2139,12 +2140,12 @@ impl PacketData for ClassTypeSetValuesOut {
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ClassTypeInvokeMethodOutArgumentsRepeated {
+pub struct ClassTypeInvokeMethodSendArgumentsRepeated {
   /* The argument value. */
   pub arg: JDWPValue,
 }
 
-impl PacketData for ClassTypeInvokeMethodOutArgumentsRepeated {
+impl PacketData for ClassTypeInvokeMethodSendArgumentsRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.arg.write_to(writer)?;
     Ok(())
@@ -2152,12 +2153,12 @@ impl PacketData for ClassTypeInvokeMethodOutArgumentsRepeated {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let arg = JDWPValue::read_from(reader, c)?;
-    Ok(ClassTypeInvokeMethodOutArgumentsRepeated { arg })
+    Ok(ClassTypeInvokeMethodSendArgumentsRepeated { arg })
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct ClassTypeInvokeMethodOut {
+pub struct ClassTypeInvokeMethodSend {
   /* The class type ID. */
   pub clazz: JDWPIDLengthEqReferenceType,
   /* The thread in which to invoke. */
@@ -2167,12 +2168,12 @@ pub struct ClassTypeInvokeMethodOut {
   /*  */
   pub arguments: i32,
   /* Repeated arguments times: */
-  pub arguments_repeated: Vec<ClassTypeInvokeMethodOutArgumentsRepeated>,
+  pub arguments_repeated: Vec<ClassTypeInvokeMethodSendArgumentsRepeated>,
   /* Invocation options */
   pub options: i32,
 }
 
-impl PacketData for ClassTypeInvokeMethodOut {
+impl PacketData for ClassTypeInvokeMethodSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.clazz.write_to(writer)?;
     self.thread.write_to(writer)?;
@@ -2192,12 +2193,12 @@ impl PacketData for ClassTypeInvokeMethodOut {
     let arguments = i32::read_from(reader, c)?;
     let mut arguments_repeated = Vec::new();
     for _ in 0..arguments {
-      arguments_repeated.push(ClassTypeInvokeMethodOutArgumentsRepeated::read_from(
+      arguments_repeated.push(ClassTypeInvokeMethodSendArgumentsRepeated::read_from(
         reader, c,
       )?);
     }
     let options = i32::read_from(reader, c)?;
-    Ok(ClassTypeInvokeMethodOut {
+    Ok(ClassTypeInvokeMethodSend {
       clazz,
       thread,
       method_id,
@@ -2208,14 +2209,14 @@ impl PacketData for ClassTypeInvokeMethodOut {
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ClassTypeInvokeMethodResponse {
+pub struct ClassTypeInvokeMethodReceive {
   /* The returned value. */
   pub return_value: JDWPValue,
   /* The thrown exception. */
   pub exception: JDWPTaggedObjectID,
 }
 
-impl PacketData for ClassTypeInvokeMethodResponse {
+impl PacketData for ClassTypeInvokeMethodReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.return_value.write_to(writer)?;
     self.exception.write_to(writer)?;
@@ -2225,19 +2226,19 @@ impl PacketData for ClassTypeInvokeMethodResponse {
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let return_value = JDWPValue::read_from(reader, c)?;
     let exception = JDWPTaggedObjectID::read_from(reader, c)?;
-    Ok(ClassTypeInvokeMethodResponse {
+    Ok(ClassTypeInvokeMethodReceive {
       return_value,
       exception,
     })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ClassTypeNewInstanceOutArgumentsRepeated {
+pub struct ClassTypeNewInstanceSendArgumentsRepeated {
   /* The argument value. */
   pub arg: JDWPValue,
 }
 
-impl PacketData for ClassTypeNewInstanceOutArgumentsRepeated {
+impl PacketData for ClassTypeNewInstanceSendArgumentsRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.arg.write_to(writer)?;
     Ok(())
@@ -2245,12 +2246,12 @@ impl PacketData for ClassTypeNewInstanceOutArgumentsRepeated {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let arg = JDWPValue::read_from(reader, c)?;
-    Ok(ClassTypeNewInstanceOutArgumentsRepeated { arg })
+    Ok(ClassTypeNewInstanceSendArgumentsRepeated { arg })
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct ClassTypeNewInstanceOut {
+pub struct ClassTypeNewInstanceSend {
   /* The class type ID. */
   pub clazz: JDWPIDLengthEqReferenceType,
   /* The thread in which to invoke the constructor. */
@@ -2260,12 +2261,12 @@ pub struct ClassTypeNewInstanceOut {
   /*  */
   pub arguments: i32,
   /* Repeated arguments times: */
-  pub arguments_repeated: Vec<ClassTypeNewInstanceOutArgumentsRepeated>,
+  pub arguments_repeated: Vec<ClassTypeNewInstanceSendArgumentsRepeated>,
   /* Constructor invocation options */
   pub options: i32,
 }
 
-impl PacketData for ClassTypeNewInstanceOut {
+impl PacketData for ClassTypeNewInstanceSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.clazz.write_to(writer)?;
     self.thread.write_to(writer)?;
@@ -2285,12 +2286,12 @@ impl PacketData for ClassTypeNewInstanceOut {
     let arguments = i32::read_from(reader, c)?;
     let mut arguments_repeated = Vec::new();
     for _ in 0..arguments {
-      arguments_repeated.push(ClassTypeNewInstanceOutArgumentsRepeated::read_from(
+      arguments_repeated.push(ClassTypeNewInstanceSendArgumentsRepeated::read_from(
         reader, c,
       )?);
     }
     let options = i32::read_from(reader, c)?;
-    Ok(ClassTypeNewInstanceOut {
+    Ok(ClassTypeNewInstanceSend {
       clazz,
       thread,
       method_id,
@@ -2301,14 +2302,14 @@ impl PacketData for ClassTypeNewInstanceOut {
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ClassTypeNewInstanceResponse {
+pub struct ClassTypeNewInstanceReceive {
   /* The newly created object, or null if the constructor threw an exception. */
   pub new_object: JDWPTaggedObjectID,
   /* The thrown exception, if any; otherwise, null. */
   pub exception: JDWPTaggedObjectID,
 }
 
-impl PacketData for ClassTypeNewInstanceResponse {
+impl PacketData for ClassTypeNewInstanceReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.new_object.write_to(writer)?;
     self.exception.write_to(writer)?;
@@ -2318,21 +2319,21 @@ impl PacketData for ClassTypeNewInstanceResponse {
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let new_object = JDWPTaggedObjectID::read_from(reader, c)?;
     let exception = JDWPTaggedObjectID::read_from(reader, c)?;
-    Ok(ClassTypeNewInstanceResponse {
+    Ok(ClassTypeNewInstanceReceive {
       new_object,
       exception,
     })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ArrayTypeNewInstanceOut {
+pub struct ArrayTypeNewInstanceSend {
   /* The array type of the new instance. */
   pub arr_type: JDWPIDLengthEqReferenceType,
   /* The length of the array. */
   pub length: i32,
 }
 
-impl PacketData for ArrayTypeNewInstanceOut {
+impl PacketData for ArrayTypeNewInstanceSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.arr_type.write_to(writer)?;
     self.length.write_to(writer)?;
@@ -2342,16 +2343,16 @@ impl PacketData for ArrayTypeNewInstanceOut {
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let arr_type = JDWPIDLengthEqReferenceType::read_from(reader, c)?;
     let length = i32::read_from(reader, c)?;
-    Ok(ArrayTypeNewInstanceOut { arr_type, length })
+    Ok(ArrayTypeNewInstanceSend { arr_type, length })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ArrayTypeNewInstanceResponse {
+pub struct ArrayTypeNewInstanceReceive {
   /* The newly created array object. */
   pub new_array: JDWPTaggedObjectID,
 }
 
-impl PacketData for ArrayTypeNewInstanceResponse {
+impl PacketData for ArrayTypeNewInstanceReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.new_array.write_to(writer)?;
     Ok(())
@@ -2359,16 +2360,16 @@ impl PacketData for ArrayTypeNewInstanceResponse {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let new_array = JDWPTaggedObjectID::read_from(reader, c)?;
-    Ok(ArrayTypeNewInstanceResponse { new_array })
+    Ok(ArrayTypeNewInstanceReceive { new_array })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct InterfaceTypeInvokeMethodOutArgumentsRepeated {
+pub struct InterfaceTypeInvokeMethodSendArgumentsRepeated {
   /* The argument value. */
   pub arg: JDWPValue,
 }
 
-impl PacketData for InterfaceTypeInvokeMethodOutArgumentsRepeated {
+impl PacketData for InterfaceTypeInvokeMethodSendArgumentsRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.arg.write_to(writer)?;
     Ok(())
@@ -2376,12 +2377,12 @@ impl PacketData for InterfaceTypeInvokeMethodOutArgumentsRepeated {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let arg = JDWPValue::read_from(reader, c)?;
-    Ok(InterfaceTypeInvokeMethodOutArgumentsRepeated { arg })
+    Ok(InterfaceTypeInvokeMethodSendArgumentsRepeated { arg })
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct InterfaceTypeInvokeMethodOut {
+pub struct InterfaceTypeInvokeMethodSend {
   /* The interface type ID. */
   pub clazz: JDWPIDLengthEqReferenceType,
   /* The thread in which to invoke. */
@@ -2391,12 +2392,12 @@ pub struct InterfaceTypeInvokeMethodOut {
   /*  */
   pub arguments: i32,
   /* Repeated arguments times: */
-  pub arguments_repeated: Vec<InterfaceTypeInvokeMethodOutArgumentsRepeated>,
+  pub arguments_repeated: Vec<InterfaceTypeInvokeMethodSendArgumentsRepeated>,
   /* Invocation options */
   pub options: i32,
 }
 
-impl PacketData for InterfaceTypeInvokeMethodOut {
+impl PacketData for InterfaceTypeInvokeMethodSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.clazz.write_to(writer)?;
     self.thread.write_to(writer)?;
@@ -2416,12 +2417,12 @@ impl PacketData for InterfaceTypeInvokeMethodOut {
     let arguments = i32::read_from(reader, c)?;
     let mut arguments_repeated = Vec::new();
     for _ in 0..arguments {
-      arguments_repeated.push(InterfaceTypeInvokeMethodOutArgumentsRepeated::read_from(
+      arguments_repeated.push(InterfaceTypeInvokeMethodSendArgumentsRepeated::read_from(
         reader, c,
       )?);
     }
     let options = i32::read_from(reader, c)?;
-    Ok(InterfaceTypeInvokeMethodOut {
+    Ok(InterfaceTypeInvokeMethodSend {
       clazz,
       thread,
       method_id,
@@ -2432,14 +2433,14 @@ impl PacketData for InterfaceTypeInvokeMethodOut {
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct InterfaceTypeInvokeMethodResponse {
+pub struct InterfaceTypeInvokeMethodReceive {
   /* The returned value. */
   pub return_value: JDWPValue,
   /* The thrown exception. */
   pub exception: JDWPTaggedObjectID,
 }
 
-impl PacketData for InterfaceTypeInvokeMethodResponse {
+impl PacketData for InterfaceTypeInvokeMethodReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.return_value.write_to(writer)?;
     self.exception.write_to(writer)?;
@@ -2449,21 +2450,21 @@ impl PacketData for InterfaceTypeInvokeMethodResponse {
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let return_value = JDWPValue::read_from(reader, c)?;
     let exception = JDWPTaggedObjectID::read_from(reader, c)?;
-    Ok(InterfaceTypeInvokeMethodResponse {
+    Ok(InterfaceTypeInvokeMethodReceive {
       return_value,
       exception,
     })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct MethodLineTableOut {
+pub struct MethodLineTableSend {
   /* The class. */
   pub ref_type: JDWPIDLengthEqReferenceType,
   /* The method. */
   pub method_id: JDWPIDLengthEqMethod,
 }
 
-impl PacketData for MethodLineTableOut {
+impl PacketData for MethodLineTableSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.ref_type.write_to(writer)?;
     self.method_id.write_to(writer)?;
@@ -2473,21 +2474,21 @@ impl PacketData for MethodLineTableOut {
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let ref_type = JDWPIDLengthEqReferenceType::read_from(reader, c)?;
     let method_id = JDWPIDLengthEqMethod::read_from(reader, c)?;
-    Ok(MethodLineTableOut {
+    Ok(MethodLineTableSend {
       ref_type,
       method_id,
     })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct MethodLineTableResponseLinesRepeated {
+pub struct MethodLineTableReceiveLinesRepeated {
   /* Initial code index of the line, start <= linecodeindex < end */
   pub line_code_index: i64,
   /* Line number. */
   pub line_number: i32,
 }
 
-impl PacketData for MethodLineTableResponseLinesRepeated {
+impl PacketData for MethodLineTableReceiveLinesRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.line_code_index.write_to(writer)?;
     self.line_number.write_to(writer)?;
@@ -2497,7 +2498,7 @@ impl PacketData for MethodLineTableResponseLinesRepeated {
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let line_code_index = i64::read_from(reader, c)?;
     let line_number = i32::read_from(reader, c)?;
-    Ok(MethodLineTableResponseLinesRepeated {
+    Ok(MethodLineTableReceiveLinesRepeated {
       line_code_index,
       line_number,
     })
@@ -2505,7 +2506,7 @@ impl PacketData for MethodLineTableResponseLinesRepeated {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct MethodLineTableResponse {
+pub struct MethodLineTableReceive {
   /* Lowest valid code index for the method, >=0, or -1 if the method is native */
   pub start: i64,
   /* Highest valid code index for the method, >=0, or -1 if the method is native */
@@ -2513,10 +2514,10 @@ pub struct MethodLineTableResponse {
   /* The number of entries in the line table for this method. */
   pub lines: i32,
   /* Repeated lines times: */
-  pub lines_repeated: Vec<MethodLineTableResponseLinesRepeated>,
+  pub lines_repeated: Vec<MethodLineTableReceiveLinesRepeated>,
 }
 
-impl PacketData for MethodLineTableResponse {
+impl PacketData for MethodLineTableReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.start.write_to(writer)?;
     self.end.write_to(writer)?;
@@ -2533,9 +2534,9 @@ impl PacketData for MethodLineTableResponse {
     let lines = i32::read_from(reader, c)?;
     let mut lines_repeated = Vec::new();
     for _ in 0..lines {
-      lines_repeated.push(MethodLineTableResponseLinesRepeated::read_from(reader, c)?);
+      lines_repeated.push(MethodLineTableReceiveLinesRepeated::read_from(reader, c)?);
     }
-    Ok(MethodLineTableResponse {
+    Ok(MethodLineTableReceive {
       start,
       end,
       lines,
@@ -2544,14 +2545,14 @@ impl PacketData for MethodLineTableResponse {
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct MethodVariableTableOut {
+pub struct MethodVariableTableSend {
   /* The class. */
   pub ref_type: JDWPIDLengthEqReferenceType,
   /* The method. */
   pub method_id: JDWPIDLengthEqMethod,
 }
 
-impl PacketData for MethodVariableTableOut {
+impl PacketData for MethodVariableTableSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.ref_type.write_to(writer)?;
     self.method_id.write_to(writer)?;
@@ -2561,14 +2562,14 @@ impl PacketData for MethodVariableTableOut {
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let ref_type = JDWPIDLengthEqReferenceType::read_from(reader, c)?;
     let method_id = JDWPIDLengthEqMethod::read_from(reader, c)?;
-    Ok(MethodVariableTableOut {
+    Ok(MethodVariableTableSend {
       ref_type,
       method_id,
     })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct MethodVariableTableResponseSlotsRepeated {
+pub struct MethodVariableTableReceiveSlotsRepeated {
   /* First code index at which the variable is visible (unsigned). Used in conjunction with length. The variable can be get or set only when the current codeIndex <= current frame code index < codeIndex + length */
   pub code_index: i64,
   /* The variable's name. */
@@ -2581,7 +2582,7 @@ pub struct MethodVariableTableResponseSlotsRepeated {
   pub slot: i32,
 }
 
-impl PacketData for MethodVariableTableResponseSlotsRepeated {
+impl PacketData for MethodVariableTableReceiveSlotsRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.code_index.write_to(writer)?;
     self.name.write_to(writer)?;
@@ -2597,7 +2598,7 @@ impl PacketData for MethodVariableTableResponseSlotsRepeated {
     let signature = JDWPString::read_from(reader, c)?;
     let length = i32::read_from(reader, c)?;
     let slot = i32::read_from(reader, c)?;
-    Ok(MethodVariableTableResponseSlotsRepeated {
+    Ok(MethodVariableTableReceiveSlotsRepeated {
       code_index,
       name,
       signature,
@@ -2608,16 +2609,16 @@ impl PacketData for MethodVariableTableResponseSlotsRepeated {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct MethodVariableTableResponse {
+pub struct MethodVariableTableReceive {
   /* The number of words in the frame used by arguments. Eight-byte arguments use two words; all others use one. */
   pub arg_cnt: i32,
   /* The number of variables. */
   pub slots: i32,
   /* Repeated slots times: */
-  pub slots_repeated: Vec<MethodVariableTableResponseSlotsRepeated>,
+  pub slots_repeated: Vec<MethodVariableTableReceiveSlotsRepeated>,
 }
 
-impl PacketData for MethodVariableTableResponse {
+impl PacketData for MethodVariableTableReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.arg_cnt.write_to(writer)?;
     self.slots.write_to(writer)?;
@@ -2632,11 +2633,11 @@ impl PacketData for MethodVariableTableResponse {
     let slots = i32::read_from(reader, c)?;
     let mut slots_repeated = Vec::new();
     for _ in 0..slots {
-      slots_repeated.push(MethodVariableTableResponseSlotsRepeated::read_from(
+      slots_repeated.push(MethodVariableTableReceiveSlotsRepeated::read_from(
         reader, c,
       )?);
     }
-    Ok(MethodVariableTableResponse {
+    Ok(MethodVariableTableReceive {
       arg_cnt,
       slots,
       slots_repeated,
@@ -2644,14 +2645,14 @@ impl PacketData for MethodVariableTableResponse {
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct MethodBytecodesOut {
+pub struct MethodBytecodesSend {
   /* The class. */
   pub ref_type: JDWPIDLengthEqReferenceType,
   /* The method. */
   pub method_id: JDWPIDLengthEqMethod,
 }
 
-impl PacketData for MethodBytecodesOut {
+impl PacketData for MethodBytecodesSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.ref_type.write_to(writer)?;
     self.method_id.write_to(writer)?;
@@ -2661,19 +2662,19 @@ impl PacketData for MethodBytecodesOut {
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let ref_type = JDWPIDLengthEqReferenceType::read_from(reader, c)?;
     let method_id = JDWPIDLengthEqMethod::read_from(reader, c)?;
-    Ok(MethodBytecodesOut {
+    Ok(MethodBytecodesSend {
       ref_type,
       method_id,
     })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct MethodBytecodesResponseBytesRepeated {
+pub struct MethodBytecodesReceiveBytesRepeated {
   /* A Java bytecode. */
   pub bytecode: i8,
 }
 
-impl PacketData for MethodBytecodesResponseBytesRepeated {
+impl PacketData for MethodBytecodesReceiveBytesRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.bytecode.write_to(writer)?;
     Ok(())
@@ -2681,19 +2682,19 @@ impl PacketData for MethodBytecodesResponseBytesRepeated {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let bytecode = i8::read_from(reader, c)?;
-    Ok(MethodBytecodesResponseBytesRepeated { bytecode })
+    Ok(MethodBytecodesReceiveBytesRepeated { bytecode })
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct MethodBytecodesResponse {
+pub struct MethodBytecodesReceive {
   /*  */
   pub bytes: i32,
   /* Repeated bytes times: */
-  pub bytes_repeated: Vec<MethodBytecodesResponseBytesRepeated>,
+  pub bytes_repeated: Vec<MethodBytecodesReceiveBytesRepeated>,
 }
 
-impl PacketData for MethodBytecodesResponse {
+impl PacketData for MethodBytecodesReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.bytes.write_to(writer)?;
     for item in &self.bytes_repeated {
@@ -2706,23 +2707,23 @@ impl PacketData for MethodBytecodesResponse {
     let bytes = i32::read_from(reader, c)?;
     let mut bytes_repeated = Vec::new();
     for _ in 0..bytes {
-      bytes_repeated.push(MethodBytecodesResponseBytesRepeated::read_from(reader, c)?);
+      bytes_repeated.push(MethodBytecodesReceiveBytesRepeated::read_from(reader, c)?);
     }
-    Ok(MethodBytecodesResponse {
+    Ok(MethodBytecodesReceive {
       bytes,
       bytes_repeated,
     })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct MethodIsObsoleteOut {
+pub struct MethodIsObsoleteSend {
   /* The class. */
   pub ref_type: JDWPIDLengthEqReferenceType,
   /* The method. */
   pub method_id: JDWPIDLengthEqMethod,
 }
 
-impl PacketData for MethodIsObsoleteOut {
+impl PacketData for MethodIsObsoleteSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.ref_type.write_to(writer)?;
     self.method_id.write_to(writer)?;
@@ -2732,19 +2733,19 @@ impl PacketData for MethodIsObsoleteOut {
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let ref_type = JDWPIDLengthEqReferenceType::read_from(reader, c)?;
     let method_id = JDWPIDLengthEqMethod::read_from(reader, c)?;
-    Ok(MethodIsObsoleteOut {
+    Ok(MethodIsObsoleteSend {
       ref_type,
       method_id,
     })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct MethodIsObsoleteResponse {
+pub struct MethodIsObsoleteReceive {
   /* true if this method has been replacedby a non-equivalent method usingthe RedefineClasses command. */
   pub is_obsolete: bool,
 }
 
-impl PacketData for MethodIsObsoleteResponse {
+impl PacketData for MethodIsObsoleteReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.is_obsolete.write_to(writer)?;
     Ok(())
@@ -2752,18 +2753,18 @@ impl PacketData for MethodIsObsoleteResponse {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let is_obsolete = bool::read_from(reader, c)?;
-    Ok(MethodIsObsoleteResponse { is_obsolete })
+    Ok(MethodIsObsoleteReceive { is_obsolete })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct MethodVariableTableWithGenericOut {
+pub struct MethodVariableTableWithGenericSend {
   /* The class. */
   pub ref_type: JDWPIDLengthEqReferenceType,
   /* The method. */
   pub method_id: JDWPIDLengthEqMethod,
 }
 
-impl PacketData for MethodVariableTableWithGenericOut {
+impl PacketData for MethodVariableTableWithGenericSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.ref_type.write_to(writer)?;
     self.method_id.write_to(writer)?;
@@ -2773,14 +2774,14 @@ impl PacketData for MethodVariableTableWithGenericOut {
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let ref_type = JDWPIDLengthEqReferenceType::read_from(reader, c)?;
     let method_id = JDWPIDLengthEqMethod::read_from(reader, c)?;
-    Ok(MethodVariableTableWithGenericOut {
+    Ok(MethodVariableTableWithGenericSend {
       ref_type,
       method_id,
     })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct MethodVariableTableWithGenericResponseSlotsRepeated {
+pub struct MethodVariableTableWithGenericReceiveSlotsRepeated {
   /* First code index at which the variable is visible (unsigned). Used in conjunction with length. The variable can be get or set only when the current codeIndex <= current frame code index < codeIndex + length */
   pub code_index: i64,
   /* The variable's name. */
@@ -2795,7 +2796,7 @@ pub struct MethodVariableTableWithGenericResponseSlotsRepeated {
   pub slot: i32,
 }
 
-impl PacketData for MethodVariableTableWithGenericResponseSlotsRepeated {
+impl PacketData for MethodVariableTableWithGenericReceiveSlotsRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.code_index.write_to(writer)?;
     self.name.write_to(writer)?;
@@ -2813,7 +2814,7 @@ impl PacketData for MethodVariableTableWithGenericResponseSlotsRepeated {
     let generic_signature = JDWPString::read_from(reader, c)?;
     let length = i32::read_from(reader, c)?;
     let slot = i32::read_from(reader, c)?;
-    Ok(MethodVariableTableWithGenericResponseSlotsRepeated {
+    Ok(MethodVariableTableWithGenericReceiveSlotsRepeated {
       code_index,
       name,
       signature,
@@ -2825,16 +2826,16 @@ impl PacketData for MethodVariableTableWithGenericResponseSlotsRepeated {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct MethodVariableTableWithGenericResponse {
+pub struct MethodVariableTableWithGenericReceive {
   /* The number of words in the frame used by arguments. Eight-byte arguments use two words; all others use one. */
   pub arg_cnt: i32,
   /* The number of variables. */
   pub slots: i32,
   /* Repeated slots times: */
-  pub slots_repeated: Vec<MethodVariableTableWithGenericResponseSlotsRepeated>,
+  pub slots_repeated: Vec<MethodVariableTableWithGenericReceiveSlotsRepeated>,
 }
 
-impl PacketData for MethodVariableTableWithGenericResponse {
+impl PacketData for MethodVariableTableWithGenericReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.arg_cnt.write_to(writer)?;
     self.slots.write_to(writer)?;
@@ -2850,9 +2851,9 @@ impl PacketData for MethodVariableTableWithGenericResponse {
     let mut slots_repeated = Vec::new();
     for _ in 0..slots {
       slots_repeated
-        .push(MethodVariableTableWithGenericResponseSlotsRepeated::read_from(reader, c)?);
+        .push(MethodVariableTableWithGenericReceiveSlotsRepeated::read_from(reader, c)?);
     }
-    Ok(MethodVariableTableWithGenericResponse {
+    Ok(MethodVariableTableWithGenericReceive {
       arg_cnt,
       slots,
       slots_repeated,
@@ -2860,12 +2861,12 @@ impl PacketData for MethodVariableTableWithGenericResponse {
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ObjectReferenceReferenceTypeOut {
+pub struct ObjectReferenceReferenceTypeSend {
   /* The object ID */
   pub object: JDWPIDLengthEqObject,
 }
 
-impl PacketData for ObjectReferenceReferenceTypeOut {
+impl PacketData for ObjectReferenceReferenceTypeSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.object.write_to(writer)?;
     Ok(())
@@ -2873,18 +2874,18 @@ impl PacketData for ObjectReferenceReferenceTypeOut {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let object = JDWPIDLengthEqObject::read_from(reader, c)?;
-    Ok(ObjectReferenceReferenceTypeOut { object })
+    Ok(ObjectReferenceReferenceTypeSend { object })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ObjectReferenceReferenceTypeResponse {
+pub struct ObjectReferenceReferenceTypeReceive {
   /* Kind of following reference type. */
   pub ref_type_tag: i8,
   /* The runtime reference type. */
   pub type_id: JDWPIDLengthEqReferenceType,
 }
 
-impl PacketData for ObjectReferenceReferenceTypeResponse {
+impl PacketData for ObjectReferenceReferenceTypeReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.ref_type_tag.write_to(writer)?;
     self.type_id.write_to(writer)?;
@@ -2894,19 +2895,19 @@ impl PacketData for ObjectReferenceReferenceTypeResponse {
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let ref_type_tag = i8::read_from(reader, c)?;
     let type_id = JDWPIDLengthEqReferenceType::read_from(reader, c)?;
-    Ok(ObjectReferenceReferenceTypeResponse {
+    Ok(ObjectReferenceReferenceTypeReceive {
       ref_type_tag,
       type_id,
     })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ObjectReferenceGetValuesOutFieldsRepeated {
+pub struct ObjectReferenceGetValuesSendFieldsRepeated {
   /* Field to get. */
   pub field_id: JDWPIDLengthEqField,
 }
 
-impl PacketData for ObjectReferenceGetValuesOutFieldsRepeated {
+impl PacketData for ObjectReferenceGetValuesSendFieldsRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.field_id.write_to(writer)?;
     Ok(())
@@ -2914,21 +2915,21 @@ impl PacketData for ObjectReferenceGetValuesOutFieldsRepeated {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let field_id = JDWPIDLengthEqField::read_from(reader, c)?;
-    Ok(ObjectReferenceGetValuesOutFieldsRepeated { field_id })
+    Ok(ObjectReferenceGetValuesSendFieldsRepeated { field_id })
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct ObjectReferenceGetValuesOut {
+pub struct ObjectReferenceGetValuesSend {
   /* The object ID */
   pub object: JDWPIDLengthEqObject,
   /* The number of values to get */
   pub fields: i32,
   /* Repeated fields times: */
-  pub fields_repeated: Vec<ObjectReferenceGetValuesOutFieldsRepeated>,
+  pub fields_repeated: Vec<ObjectReferenceGetValuesSendFieldsRepeated>,
 }
 
-impl PacketData for ObjectReferenceGetValuesOut {
+impl PacketData for ObjectReferenceGetValuesSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.object.write_to(writer)?;
     self.fields.write_to(writer)?;
@@ -2943,11 +2944,11 @@ impl PacketData for ObjectReferenceGetValuesOut {
     let fields = i32::read_from(reader, c)?;
     let mut fields_repeated = Vec::new();
     for _ in 0..fields {
-      fields_repeated.push(ObjectReferenceGetValuesOutFieldsRepeated::read_from(
+      fields_repeated.push(ObjectReferenceGetValuesSendFieldsRepeated::read_from(
         reader, c,
       )?);
     }
-    Ok(ObjectReferenceGetValuesOut {
+    Ok(ObjectReferenceGetValuesSend {
       object,
       fields,
       fields_repeated,
@@ -2955,12 +2956,12 @@ impl PacketData for ObjectReferenceGetValuesOut {
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ObjectReferenceGetValuesResponseValuesRepeated {
+pub struct ObjectReferenceGetValuesReceiveValuesRepeated {
   /* The field value */
   pub value: JDWPValue,
 }
 
-impl PacketData for ObjectReferenceGetValuesResponseValuesRepeated {
+impl PacketData for ObjectReferenceGetValuesReceiveValuesRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.value.write_to(writer)?;
     Ok(())
@@ -2968,19 +2969,19 @@ impl PacketData for ObjectReferenceGetValuesResponseValuesRepeated {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let value = JDWPValue::read_from(reader, c)?;
-    Ok(ObjectReferenceGetValuesResponseValuesRepeated { value })
+    Ok(ObjectReferenceGetValuesReceiveValuesRepeated { value })
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct ObjectReferenceGetValuesResponse {
+pub struct ObjectReferenceGetValuesReceive {
   /* The number of values returned, always equal to 'fields', the number of values to get. Field values are ordered in the reply in the same order as corresponding fieldIDs in the command. */
   pub values: i32,
   /* Repeated values times: */
-  pub values_repeated: Vec<ObjectReferenceGetValuesResponseValuesRepeated>,
+  pub values_repeated: Vec<ObjectReferenceGetValuesReceiveValuesRepeated>,
 }
 
-impl PacketData for ObjectReferenceGetValuesResponse {
+impl PacketData for ObjectReferenceGetValuesReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.values.write_to(writer)?;
     for item in &self.values_repeated {
@@ -2993,25 +2994,25 @@ impl PacketData for ObjectReferenceGetValuesResponse {
     let values = i32::read_from(reader, c)?;
     let mut values_repeated = Vec::new();
     for _ in 0..values {
-      values_repeated.push(ObjectReferenceGetValuesResponseValuesRepeated::read_from(
+      values_repeated.push(ObjectReferenceGetValuesReceiveValuesRepeated::read_from(
         reader, c,
       )?);
     }
-    Ok(ObjectReferenceGetValuesResponse {
+    Ok(ObjectReferenceGetValuesReceive {
       values,
       values_repeated,
     })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ObjectReferenceSetValuesOutValuesRepeated {
+pub struct ObjectReferenceSetValuesSendValuesRepeated {
   /* Field to set. */
   pub field_id: JDWPIDLengthEqField,
   /* Value to put in the field. */
   pub value: JDWPValue,
 }
 
-impl PacketData for ObjectReferenceSetValuesOutValuesRepeated {
+impl PacketData for ObjectReferenceSetValuesSendValuesRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.field_id.write_to(writer)?;
     self.value.write_untagged_to(writer)?;
@@ -3021,21 +3022,21 @@ impl PacketData for ObjectReferenceSetValuesOutValuesRepeated {
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let field_id = JDWPIDLengthEqField::read_from(reader, c)?;
     let value = JDWPValue::read_from(reader, c)?;
-    Ok(ObjectReferenceSetValuesOutValuesRepeated { field_id, value })
+    Ok(ObjectReferenceSetValuesSendValuesRepeated { field_id, value })
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct ObjectReferenceSetValuesOut {
+pub struct ObjectReferenceSetValuesSend {
   /* The object ID */
   pub object: JDWPIDLengthEqObject,
   /* The number of fields to set. */
   pub values: i32,
   /* Repeated values times: */
-  pub values_repeated: Vec<ObjectReferenceSetValuesOutValuesRepeated>,
+  pub values_repeated: Vec<ObjectReferenceSetValuesSendValuesRepeated>,
 }
 
-impl PacketData for ObjectReferenceSetValuesOut {
+impl PacketData for ObjectReferenceSetValuesSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.object.write_to(writer)?;
     self.values.write_to(writer)?;
@@ -3050,11 +3051,11 @@ impl PacketData for ObjectReferenceSetValuesOut {
     let values = i32::read_from(reader, c)?;
     let mut values_repeated = Vec::new();
     for _ in 0..values {
-      values_repeated.push(ObjectReferenceSetValuesOutValuesRepeated::read_from(
+      values_repeated.push(ObjectReferenceSetValuesSendValuesRepeated::read_from(
         reader, c,
       )?);
     }
-    Ok(ObjectReferenceSetValuesOut {
+    Ok(ObjectReferenceSetValuesSend {
       object,
       values,
       values_repeated,
@@ -3062,12 +3063,12 @@ impl PacketData for ObjectReferenceSetValuesOut {
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ObjectReferenceMonitorInfoOut {
+pub struct ObjectReferenceMonitorInfoSend {
   /* The object ID */
   pub object: JDWPIDLengthEqObject,
 }
 
-impl PacketData for ObjectReferenceMonitorInfoOut {
+impl PacketData for ObjectReferenceMonitorInfoSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.object.write_to(writer)?;
     Ok(())
@@ -3075,16 +3076,16 @@ impl PacketData for ObjectReferenceMonitorInfoOut {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let object = JDWPIDLengthEqObject::read_from(reader, c)?;
-    Ok(ObjectReferenceMonitorInfoOut { object })
+    Ok(ObjectReferenceMonitorInfoSend { object })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ObjectReferenceMonitorInfoResponseWaitersRepeated {
+pub struct ObjectReferenceMonitorInfoReceiveWaitersRepeated {
   /* A thread waiting for this monitor. */
   pub thread: JDWPIDLengthEqObject,
 }
 
-impl PacketData for ObjectReferenceMonitorInfoResponseWaitersRepeated {
+impl PacketData for ObjectReferenceMonitorInfoReceiveWaitersRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.thread.write_to(writer)?;
     Ok(())
@@ -3092,12 +3093,12 @@ impl PacketData for ObjectReferenceMonitorInfoResponseWaitersRepeated {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let thread = JDWPIDLengthEqObject::read_from(reader, c)?;
-    Ok(ObjectReferenceMonitorInfoResponseWaitersRepeated { thread })
+    Ok(ObjectReferenceMonitorInfoReceiveWaitersRepeated { thread })
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct ObjectReferenceMonitorInfoResponse {
+pub struct ObjectReferenceMonitorInfoReceive {
   /* The monitor owner, or null if it is not currently owned. */
   pub owner: JDWPIDLengthEqObject,
   /* The number of times the monitor has been entered. */
@@ -3105,10 +3106,10 @@ pub struct ObjectReferenceMonitorInfoResponse {
   /* The number of threads that are waiting for the monitor 0 if there is no current owner */
   pub waiters: i32,
   /* Repeated waiters times: */
-  pub waiters_repeated: Vec<ObjectReferenceMonitorInfoResponseWaitersRepeated>,
+  pub waiters_repeated: Vec<ObjectReferenceMonitorInfoReceiveWaitersRepeated>,
 }
 
-impl PacketData for ObjectReferenceMonitorInfoResponse {
+impl PacketData for ObjectReferenceMonitorInfoReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.owner.write_to(writer)?;
     self.entry_count.write_to(writer)?;
@@ -3125,10 +3126,11 @@ impl PacketData for ObjectReferenceMonitorInfoResponse {
     let waiters = i32::read_from(reader, c)?;
     let mut waiters_repeated = Vec::new();
     for _ in 0..waiters {
-      waiters_repeated
-        .push(ObjectReferenceMonitorInfoResponseWaitersRepeated::read_from(reader, c)?);
+      waiters_repeated.push(ObjectReferenceMonitorInfoReceiveWaitersRepeated::read_from(
+        reader, c,
+      )?);
     }
-    Ok(ObjectReferenceMonitorInfoResponse {
+    Ok(ObjectReferenceMonitorInfoReceive {
       owner,
       entry_count,
       waiters,
@@ -3137,12 +3139,12 @@ impl PacketData for ObjectReferenceMonitorInfoResponse {
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ObjectReferenceInvokeMethodOutArgumentsRepeated {
+pub struct ObjectReferenceInvokeMethodSendArgumentsRepeated {
   /* The argument value. */
   pub arg: JDWPValue,
 }
 
-impl PacketData for ObjectReferenceInvokeMethodOutArgumentsRepeated {
+impl PacketData for ObjectReferenceInvokeMethodSendArgumentsRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.arg.write_to(writer)?;
     Ok(())
@@ -3150,12 +3152,12 @@ impl PacketData for ObjectReferenceInvokeMethodOutArgumentsRepeated {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let arg = JDWPValue::read_from(reader, c)?;
-    Ok(ObjectReferenceInvokeMethodOutArgumentsRepeated { arg })
+    Ok(ObjectReferenceInvokeMethodSendArgumentsRepeated { arg })
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct ObjectReferenceInvokeMethodOut {
+pub struct ObjectReferenceInvokeMethodSend {
   /* The object ID */
   pub object: JDWPIDLengthEqObject,
   /* The thread in which to invoke. */
@@ -3167,12 +3169,12 @@ pub struct ObjectReferenceInvokeMethodOut {
   /* The number of arguments. */
   pub arguments: i32,
   /* Repeated arguments times: */
-  pub arguments_repeated: Vec<ObjectReferenceInvokeMethodOutArgumentsRepeated>,
+  pub arguments_repeated: Vec<ObjectReferenceInvokeMethodSendArgumentsRepeated>,
   /* Invocation options */
   pub options: i32,
 }
 
-impl PacketData for ObjectReferenceInvokeMethodOut {
+impl PacketData for ObjectReferenceInvokeMethodSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.object.write_to(writer)?;
     self.thread.write_to(writer)?;
@@ -3194,12 +3196,12 @@ impl PacketData for ObjectReferenceInvokeMethodOut {
     let arguments = i32::read_from(reader, c)?;
     let mut arguments_repeated = Vec::new();
     for _ in 0..arguments {
-      arguments_repeated.push(ObjectReferenceInvokeMethodOutArgumentsRepeated::read_from(
+      arguments_repeated.push(ObjectReferenceInvokeMethodSendArgumentsRepeated::read_from(
         reader, c,
       )?);
     }
     let options = i32::read_from(reader, c)?;
-    Ok(ObjectReferenceInvokeMethodOut {
+    Ok(ObjectReferenceInvokeMethodSend {
       object,
       thread,
       clazz,
@@ -3211,14 +3213,14 @@ impl PacketData for ObjectReferenceInvokeMethodOut {
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ObjectReferenceInvokeMethodResponse {
+pub struct ObjectReferenceInvokeMethodReceive {
   /* The returned value, or null if an exception is thrown. */
   pub return_value: JDWPValue,
   /* The thrown exception, if any. */
   pub exception: JDWPTaggedObjectID,
 }
 
-impl PacketData for ObjectReferenceInvokeMethodResponse {
+impl PacketData for ObjectReferenceInvokeMethodReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.return_value.write_to(writer)?;
     self.exception.write_to(writer)?;
@@ -3228,19 +3230,19 @@ impl PacketData for ObjectReferenceInvokeMethodResponse {
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let return_value = JDWPValue::read_from(reader, c)?;
     let exception = JDWPTaggedObjectID::read_from(reader, c)?;
-    Ok(ObjectReferenceInvokeMethodResponse {
+    Ok(ObjectReferenceInvokeMethodReceive {
       return_value,
       exception,
     })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ObjectReferenceDisableCollectionOut {
+pub struct ObjectReferenceDisableCollectionSend {
   /* The object ID */
   pub object: JDWPIDLengthEqObject,
 }
 
-impl PacketData for ObjectReferenceDisableCollectionOut {
+impl PacketData for ObjectReferenceDisableCollectionSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.object.write_to(writer)?;
     Ok(())
@@ -3248,16 +3250,16 @@ impl PacketData for ObjectReferenceDisableCollectionOut {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let object = JDWPIDLengthEqObject::read_from(reader, c)?;
-    Ok(ObjectReferenceDisableCollectionOut { object })
+    Ok(ObjectReferenceDisableCollectionSend { object })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ObjectReferenceEnableCollectionOut {
+pub struct ObjectReferenceEnableCollectionSend {
   /* The object ID */
   pub object: JDWPIDLengthEqObject,
 }
 
-impl PacketData for ObjectReferenceEnableCollectionOut {
+impl PacketData for ObjectReferenceEnableCollectionSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.object.write_to(writer)?;
     Ok(())
@@ -3265,16 +3267,16 @@ impl PacketData for ObjectReferenceEnableCollectionOut {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let object = JDWPIDLengthEqObject::read_from(reader, c)?;
-    Ok(ObjectReferenceEnableCollectionOut { object })
+    Ok(ObjectReferenceEnableCollectionSend { object })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ObjectReferenceIsCollectedOut {
+pub struct ObjectReferenceIsCollectedSend {
   /* The object ID */
   pub object: JDWPIDLengthEqObject,
 }
 
-impl PacketData for ObjectReferenceIsCollectedOut {
+impl PacketData for ObjectReferenceIsCollectedSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.object.write_to(writer)?;
     Ok(())
@@ -3282,16 +3284,16 @@ impl PacketData for ObjectReferenceIsCollectedOut {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let object = JDWPIDLengthEqObject::read_from(reader, c)?;
-    Ok(ObjectReferenceIsCollectedOut { object })
+    Ok(ObjectReferenceIsCollectedSend { object })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ObjectReferenceIsCollectedResponse {
+pub struct ObjectReferenceIsCollectedReceive {
   /* true if the object has been collected; false otherwise */
   pub is_collected: bool,
 }
 
-impl PacketData for ObjectReferenceIsCollectedResponse {
+impl PacketData for ObjectReferenceIsCollectedReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.is_collected.write_to(writer)?;
     Ok(())
@@ -3299,18 +3301,18 @@ impl PacketData for ObjectReferenceIsCollectedResponse {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let is_collected = bool::read_from(reader, c)?;
-    Ok(ObjectReferenceIsCollectedResponse { is_collected })
+    Ok(ObjectReferenceIsCollectedReceive { is_collected })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ObjectReferenceReferringObjectsOut {
+pub struct ObjectReferenceReferringObjectsSend {
   /* The object ID */
   pub object: JDWPIDLengthEqObject,
   /* Maximum number of referring objects to return. Must be non-negative. If zero, all referring objects are returned. */
   pub max_referrers: i32,
 }
 
-impl PacketData for ObjectReferenceReferringObjectsOut {
+impl PacketData for ObjectReferenceReferringObjectsSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.object.write_to(writer)?;
     self.max_referrers.write_to(writer)?;
@@ -3320,19 +3322,19 @@ impl PacketData for ObjectReferenceReferringObjectsOut {
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let object = JDWPIDLengthEqObject::read_from(reader, c)?;
     let max_referrers = i32::read_from(reader, c)?;
-    Ok(ObjectReferenceReferringObjectsOut {
+    Ok(ObjectReferenceReferringObjectsSend {
       object,
       max_referrers,
     })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ObjectReferenceReferringObjectsResponseReferringObjectsRepeated {
+pub struct ObjectReferenceReferringObjectsReceiveReferringObjectsRepeated {
   /* An object that references this object. */
   pub instance: JDWPTaggedObjectID,
 }
 
-impl PacketData for ObjectReferenceReferringObjectsResponseReferringObjectsRepeated {
+impl PacketData for ObjectReferenceReferringObjectsReceiveReferringObjectsRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.instance.write_to(writer)?;
     Ok(())
@@ -3340,20 +3342,20 @@ impl PacketData for ObjectReferenceReferringObjectsResponseReferringObjectsRepea
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let instance = JDWPTaggedObjectID::read_from(reader, c)?;
-    Ok(ObjectReferenceReferringObjectsResponseReferringObjectsRepeated { instance })
+    Ok(ObjectReferenceReferringObjectsReceiveReferringObjectsRepeated { instance })
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct ObjectReferenceReferringObjectsResponse {
+pub struct ObjectReferenceReferringObjectsReceive {
   /* The number of objects that follow. */
   pub referring_objects: i32,
   /* Repeated referringObjects times: */
   pub referring_objects_repeated:
-    Vec<ObjectReferenceReferringObjectsResponseReferringObjectsRepeated>,
+    Vec<ObjectReferenceReferringObjectsReceiveReferringObjectsRepeated>,
 }
 
-impl PacketData for ObjectReferenceReferringObjectsResponse {
+impl PacketData for ObjectReferenceReferringObjectsReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.referring_objects.write_to(writer)?;
     for item in &self.referring_objects_repeated {
@@ -3367,22 +3369,22 @@ impl PacketData for ObjectReferenceReferringObjectsResponse {
     let mut referring_objects_repeated = Vec::new();
     for _ in 0..referring_objects {
       referring_objects_repeated.push(
-        ObjectReferenceReferringObjectsResponseReferringObjectsRepeated::read_from(reader, c)?,
+        ObjectReferenceReferringObjectsReceiveReferringObjectsRepeated::read_from(reader, c)?,
       );
     }
-    Ok(ObjectReferenceReferringObjectsResponse {
+    Ok(ObjectReferenceReferringObjectsReceive {
       referring_objects,
       referring_objects_repeated,
     })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct StringReferenceValueOut {
+pub struct StringReferenceValueSend {
   /* The String object ID. */
   pub string_object: JDWPIDLengthEqObject,
 }
 
-impl PacketData for StringReferenceValueOut {
+impl PacketData for StringReferenceValueSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.string_object.write_to(writer)?;
     Ok(())
@@ -3390,16 +3392,16 @@ impl PacketData for StringReferenceValueOut {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let string_object = JDWPIDLengthEqObject::read_from(reader, c)?;
-    Ok(StringReferenceValueOut { string_object })
+    Ok(StringReferenceValueSend { string_object })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct StringReferenceValueResponse {
+pub struct StringReferenceValueReceive {
   /* UTF-8 representation of the string value. */
   pub string_value: JDWPString,
 }
 
-impl PacketData for StringReferenceValueResponse {
+impl PacketData for StringReferenceValueReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.string_value.write_to(writer)?;
     Ok(())
@@ -3407,16 +3409,16 @@ impl PacketData for StringReferenceValueResponse {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let string_value = JDWPString::read_from(reader, c)?;
-    Ok(StringReferenceValueResponse { string_value })
+    Ok(StringReferenceValueReceive { string_value })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ThreadReferenceNameOut {
+pub struct ThreadReferenceNameSend {
   /* The thread object ID. */
   pub thread: JDWPIDLengthEqObject,
 }
 
-impl PacketData for ThreadReferenceNameOut {
+impl PacketData for ThreadReferenceNameSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.thread.write_to(writer)?;
     Ok(())
@@ -3424,16 +3426,16 @@ impl PacketData for ThreadReferenceNameOut {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let thread = JDWPIDLengthEqObject::read_from(reader, c)?;
-    Ok(ThreadReferenceNameOut { thread })
+    Ok(ThreadReferenceNameSend { thread })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ThreadReferenceNameResponse {
+pub struct ThreadReferenceNameReceive {
   /* The thread name. */
   pub thread_name: JDWPString,
 }
 
-impl PacketData for ThreadReferenceNameResponse {
+impl PacketData for ThreadReferenceNameReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.thread_name.write_to(writer)?;
     Ok(())
@@ -3441,16 +3443,16 @@ impl PacketData for ThreadReferenceNameResponse {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let thread_name = JDWPString::read_from(reader, c)?;
-    Ok(ThreadReferenceNameResponse { thread_name })
+    Ok(ThreadReferenceNameReceive { thread_name })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ThreadReferenceSuspendOut {
+pub struct ThreadReferenceSuspendSend {
   /* The thread object ID. */
   pub thread: JDWPIDLengthEqObject,
 }
 
-impl PacketData for ThreadReferenceSuspendOut {
+impl PacketData for ThreadReferenceSuspendSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.thread.write_to(writer)?;
     Ok(())
@@ -3458,16 +3460,16 @@ impl PacketData for ThreadReferenceSuspendOut {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let thread = JDWPIDLengthEqObject::read_from(reader, c)?;
-    Ok(ThreadReferenceSuspendOut { thread })
+    Ok(ThreadReferenceSuspendSend { thread })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ThreadReferenceResumeOut {
+pub struct ThreadReferenceResumeSend {
   /* The thread object ID. */
   pub thread: JDWPIDLengthEqObject,
 }
 
-impl PacketData for ThreadReferenceResumeOut {
+impl PacketData for ThreadReferenceResumeSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.thread.write_to(writer)?;
     Ok(())
@@ -3475,16 +3477,16 @@ impl PacketData for ThreadReferenceResumeOut {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let thread = JDWPIDLengthEqObject::read_from(reader, c)?;
-    Ok(ThreadReferenceResumeOut { thread })
+    Ok(ThreadReferenceResumeSend { thread })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ThreadReferenceStatusOut {
+pub struct ThreadReferenceStatusSend {
   /* The thread object ID. */
   pub thread: JDWPIDLengthEqObject,
 }
 
-impl PacketData for ThreadReferenceStatusOut {
+impl PacketData for ThreadReferenceStatusSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.thread.write_to(writer)?;
     Ok(())
@@ -3492,18 +3494,18 @@ impl PacketData for ThreadReferenceStatusOut {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let thread = JDWPIDLengthEqObject::read_from(reader, c)?;
-    Ok(ThreadReferenceStatusOut { thread })
+    Ok(ThreadReferenceStatusSend { thread })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ThreadReferenceStatusResponse {
+pub struct ThreadReferenceStatusReceive {
   /* One of the thread status codes See JDWP.ThreadStatus */
   pub thread_status: i32,
   /* One of the suspend status codes See JDWP.SuspendStatus */
   pub suspend_status: i32,
 }
 
-impl PacketData for ThreadReferenceStatusResponse {
+impl PacketData for ThreadReferenceStatusReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.thread_status.write_to(writer)?;
     self.suspend_status.write_to(writer)?;
@@ -3513,19 +3515,19 @@ impl PacketData for ThreadReferenceStatusResponse {
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let thread_status = i32::read_from(reader, c)?;
     let suspend_status = i32::read_from(reader, c)?;
-    Ok(ThreadReferenceStatusResponse {
+    Ok(ThreadReferenceStatusReceive {
       thread_status,
       suspend_status,
     })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ThreadReferenceThreadGroupOut {
+pub struct ThreadReferenceThreadGroupSend {
   /* The thread object ID. */
   pub thread: JDWPIDLengthEqObject,
 }
 
-impl PacketData for ThreadReferenceThreadGroupOut {
+impl PacketData for ThreadReferenceThreadGroupSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.thread.write_to(writer)?;
     Ok(())
@@ -3533,16 +3535,16 @@ impl PacketData for ThreadReferenceThreadGroupOut {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let thread = JDWPIDLengthEqObject::read_from(reader, c)?;
-    Ok(ThreadReferenceThreadGroupOut { thread })
+    Ok(ThreadReferenceThreadGroupSend { thread })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ThreadReferenceThreadGroupResponse {
+pub struct ThreadReferenceThreadGroupReceive {
   /* The thread group of this thread. */
   pub group: JDWPIDLengthEqObject,
 }
 
-impl PacketData for ThreadReferenceThreadGroupResponse {
+impl PacketData for ThreadReferenceThreadGroupReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.group.write_to(writer)?;
     Ok(())
@@ -3550,11 +3552,11 @@ impl PacketData for ThreadReferenceThreadGroupResponse {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let group = JDWPIDLengthEqObject::read_from(reader, c)?;
-    Ok(ThreadReferenceThreadGroupResponse { group })
+    Ok(ThreadReferenceThreadGroupReceive { group })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ThreadReferenceFramesOut {
+pub struct ThreadReferenceFramesSend {
   /* The thread object ID. */
   pub thread: JDWPIDLengthEqObject,
   /* The index of the first frame to retrieve. */
@@ -3563,7 +3565,7 @@ pub struct ThreadReferenceFramesOut {
   pub length: i32,
 }
 
-impl PacketData for ThreadReferenceFramesOut {
+impl PacketData for ThreadReferenceFramesSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.thread.write_to(writer)?;
     self.start_frame.write_to(writer)?;
@@ -3575,7 +3577,7 @@ impl PacketData for ThreadReferenceFramesOut {
     let thread = JDWPIDLengthEqObject::read_from(reader, c)?;
     let start_frame = i32::read_from(reader, c)?;
     let length = i32::read_from(reader, c)?;
-    Ok(ThreadReferenceFramesOut {
+    Ok(ThreadReferenceFramesSend {
       thread,
       start_frame,
       length,
@@ -3583,14 +3585,14 @@ impl PacketData for ThreadReferenceFramesOut {
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ThreadReferenceFramesResponseFramesRepeated {
+pub struct ThreadReferenceFramesReceiveFramesRepeated {
   /* The ID of this frame. */
   pub frame_id: JDWPIDLengthEqFrame,
   /* The current location of this frame */
   pub location: JDWPLocation,
 }
 
-impl PacketData for ThreadReferenceFramesResponseFramesRepeated {
+impl PacketData for ThreadReferenceFramesReceiveFramesRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.frame_id.write_to(writer)?;
     self.location.write_to(writer)?;
@@ -3600,19 +3602,19 @@ impl PacketData for ThreadReferenceFramesResponseFramesRepeated {
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let frame_id = JDWPIDLengthEqFrame::read_from(reader, c)?;
     let location = JDWPLocation::read_from(reader, c)?;
-    Ok(ThreadReferenceFramesResponseFramesRepeated { frame_id, location })
+    Ok(ThreadReferenceFramesReceiveFramesRepeated { frame_id, location })
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct ThreadReferenceFramesResponse {
+pub struct ThreadReferenceFramesReceive {
   /* The number of frames retreived */
   pub frames: i32,
   /* Repeated frames times: */
-  pub frames_repeated: Vec<ThreadReferenceFramesResponseFramesRepeated>,
+  pub frames_repeated: Vec<ThreadReferenceFramesReceiveFramesRepeated>,
 }
 
-impl PacketData for ThreadReferenceFramesResponse {
+impl PacketData for ThreadReferenceFramesReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.frames.write_to(writer)?;
     for item in &self.frames_repeated {
@@ -3625,23 +3627,23 @@ impl PacketData for ThreadReferenceFramesResponse {
     let frames = i32::read_from(reader, c)?;
     let mut frames_repeated = Vec::new();
     for _ in 0..frames {
-      frames_repeated.push(ThreadReferenceFramesResponseFramesRepeated::read_from(
+      frames_repeated.push(ThreadReferenceFramesReceiveFramesRepeated::read_from(
         reader, c,
       )?);
     }
-    Ok(ThreadReferenceFramesResponse {
+    Ok(ThreadReferenceFramesReceive {
       frames,
       frames_repeated,
     })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ThreadReferenceFrameCountOut {
+pub struct ThreadReferenceFrameCountSend {
   /* The thread object ID. */
   pub thread: JDWPIDLengthEqObject,
 }
 
-impl PacketData for ThreadReferenceFrameCountOut {
+impl PacketData for ThreadReferenceFrameCountSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.thread.write_to(writer)?;
     Ok(())
@@ -3649,16 +3651,16 @@ impl PacketData for ThreadReferenceFrameCountOut {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let thread = JDWPIDLengthEqObject::read_from(reader, c)?;
-    Ok(ThreadReferenceFrameCountOut { thread })
+    Ok(ThreadReferenceFrameCountSend { thread })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ThreadReferenceFrameCountResponse {
+pub struct ThreadReferenceFrameCountReceive {
   /* The count of frames on this thread's stack. */
   pub frame_count: i32,
 }
 
-impl PacketData for ThreadReferenceFrameCountResponse {
+impl PacketData for ThreadReferenceFrameCountReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.frame_count.write_to(writer)?;
     Ok(())
@@ -3666,16 +3668,16 @@ impl PacketData for ThreadReferenceFrameCountResponse {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let frame_count = i32::read_from(reader, c)?;
-    Ok(ThreadReferenceFrameCountResponse { frame_count })
+    Ok(ThreadReferenceFrameCountReceive { frame_count })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ThreadReferenceOwnedMonitorsOut {
+pub struct ThreadReferenceOwnedMonitorsSend {
   /* The thread object ID. */
   pub thread: JDWPIDLengthEqObject,
 }
 
-impl PacketData for ThreadReferenceOwnedMonitorsOut {
+impl PacketData for ThreadReferenceOwnedMonitorsSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.thread.write_to(writer)?;
     Ok(())
@@ -3683,16 +3685,16 @@ impl PacketData for ThreadReferenceOwnedMonitorsOut {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let thread = JDWPIDLengthEqObject::read_from(reader, c)?;
-    Ok(ThreadReferenceOwnedMonitorsOut { thread })
+    Ok(ThreadReferenceOwnedMonitorsSend { thread })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ThreadReferenceOwnedMonitorsResponseOwnedRepeated {
+pub struct ThreadReferenceOwnedMonitorsReceiveOwnedRepeated {
   /* An owned monitor */
   pub monitor: JDWPTaggedObjectID,
 }
 
-impl PacketData for ThreadReferenceOwnedMonitorsResponseOwnedRepeated {
+impl PacketData for ThreadReferenceOwnedMonitorsReceiveOwnedRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.monitor.write_to(writer)?;
     Ok(())
@@ -3700,19 +3702,19 @@ impl PacketData for ThreadReferenceOwnedMonitorsResponseOwnedRepeated {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let monitor = JDWPTaggedObjectID::read_from(reader, c)?;
-    Ok(ThreadReferenceOwnedMonitorsResponseOwnedRepeated { monitor })
+    Ok(ThreadReferenceOwnedMonitorsReceiveOwnedRepeated { monitor })
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct ThreadReferenceOwnedMonitorsResponse {
+pub struct ThreadReferenceOwnedMonitorsReceive {
   /* The number of owned monitors */
   pub owned: i32,
   /* Repeated owned times: */
-  pub owned_repeated: Vec<ThreadReferenceOwnedMonitorsResponseOwnedRepeated>,
+  pub owned_repeated: Vec<ThreadReferenceOwnedMonitorsReceiveOwnedRepeated>,
 }
 
-impl PacketData for ThreadReferenceOwnedMonitorsResponse {
+impl PacketData for ThreadReferenceOwnedMonitorsReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.owned.write_to(writer)?;
     for item in &self.owned_repeated {
@@ -3725,21 +3727,23 @@ impl PacketData for ThreadReferenceOwnedMonitorsResponse {
     let owned = i32::read_from(reader, c)?;
     let mut owned_repeated = Vec::new();
     for _ in 0..owned {
-      owned_repeated.push(ThreadReferenceOwnedMonitorsResponseOwnedRepeated::read_from(reader, c)?);
+      owned_repeated.push(ThreadReferenceOwnedMonitorsReceiveOwnedRepeated::read_from(
+        reader, c,
+      )?);
     }
-    Ok(ThreadReferenceOwnedMonitorsResponse {
+    Ok(ThreadReferenceOwnedMonitorsReceive {
       owned,
       owned_repeated,
     })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ThreadReferenceCurrentContendedMonitorOut {
+pub struct ThreadReferenceCurrentContendedMonitorSend {
   /* The thread object ID. */
   pub thread: JDWPIDLengthEqObject,
 }
 
-impl PacketData for ThreadReferenceCurrentContendedMonitorOut {
+impl PacketData for ThreadReferenceCurrentContendedMonitorSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.thread.write_to(writer)?;
     Ok(())
@@ -3747,16 +3751,16 @@ impl PacketData for ThreadReferenceCurrentContendedMonitorOut {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let thread = JDWPIDLengthEqObject::read_from(reader, c)?;
-    Ok(ThreadReferenceCurrentContendedMonitorOut { thread })
+    Ok(ThreadReferenceCurrentContendedMonitorSend { thread })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ThreadReferenceCurrentContendedMonitorResponse {
+pub struct ThreadReferenceCurrentContendedMonitorReceive {
   /* The contended monitor, or null if there is no current contended monitor. */
   pub monitor: JDWPTaggedObjectID,
 }
 
-impl PacketData for ThreadReferenceCurrentContendedMonitorResponse {
+impl PacketData for ThreadReferenceCurrentContendedMonitorReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.monitor.write_to(writer)?;
     Ok(())
@@ -3764,18 +3768,18 @@ impl PacketData for ThreadReferenceCurrentContendedMonitorResponse {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let monitor = JDWPTaggedObjectID::read_from(reader, c)?;
-    Ok(ThreadReferenceCurrentContendedMonitorResponse { monitor })
+    Ok(ThreadReferenceCurrentContendedMonitorReceive { monitor })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ThreadReferenceStopOut {
+pub struct ThreadReferenceStopSend {
   /* The thread object ID. */
   pub thread: JDWPIDLengthEqObject,
   /* Asynchronous exception. This object must be an instance of java.lang.Throwable or a subclass */
   pub throwable: JDWPIDLengthEqObject,
 }
 
-impl PacketData for ThreadReferenceStopOut {
+impl PacketData for ThreadReferenceStopSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.thread.write_to(writer)?;
     self.throwable.write_to(writer)?;
@@ -3785,16 +3789,16 @@ impl PacketData for ThreadReferenceStopOut {
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let thread = JDWPIDLengthEqObject::read_from(reader, c)?;
     let throwable = JDWPIDLengthEqObject::read_from(reader, c)?;
-    Ok(ThreadReferenceStopOut { thread, throwable })
+    Ok(ThreadReferenceStopSend { thread, throwable })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ThreadReferenceInterruptOut {
+pub struct ThreadReferenceInterruptSend {
   /* The thread object ID. */
   pub thread: JDWPIDLengthEqObject,
 }
 
-impl PacketData for ThreadReferenceInterruptOut {
+impl PacketData for ThreadReferenceInterruptSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.thread.write_to(writer)?;
     Ok(())
@@ -3802,16 +3806,16 @@ impl PacketData for ThreadReferenceInterruptOut {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let thread = JDWPIDLengthEqObject::read_from(reader, c)?;
-    Ok(ThreadReferenceInterruptOut { thread })
+    Ok(ThreadReferenceInterruptSend { thread })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ThreadReferenceSuspendCountOut {
+pub struct ThreadReferenceSuspendCountSend {
   /* The thread object ID. */
   pub thread: JDWPIDLengthEqObject,
 }
 
-impl PacketData for ThreadReferenceSuspendCountOut {
+impl PacketData for ThreadReferenceSuspendCountSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.thread.write_to(writer)?;
     Ok(())
@@ -3819,16 +3823,16 @@ impl PacketData for ThreadReferenceSuspendCountOut {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let thread = JDWPIDLengthEqObject::read_from(reader, c)?;
-    Ok(ThreadReferenceSuspendCountOut { thread })
+    Ok(ThreadReferenceSuspendCountSend { thread })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ThreadReferenceSuspendCountResponse {
+pub struct ThreadReferenceSuspendCountReceive {
   /* The number of outstanding suspends of this thread. */
   pub suspend_count: i32,
 }
 
-impl PacketData for ThreadReferenceSuspendCountResponse {
+impl PacketData for ThreadReferenceSuspendCountReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.suspend_count.write_to(writer)?;
     Ok(())
@@ -3836,16 +3840,16 @@ impl PacketData for ThreadReferenceSuspendCountResponse {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let suspend_count = i32::read_from(reader, c)?;
-    Ok(ThreadReferenceSuspendCountResponse { suspend_count })
+    Ok(ThreadReferenceSuspendCountReceive { suspend_count })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ThreadReferenceOwnedMonitorsStackDepthInfoOut {
+pub struct ThreadReferenceOwnedMonitorsStackDepthInfoSend {
   /* The thread object ID. */
   pub thread: JDWPIDLengthEqObject,
 }
 
-impl PacketData for ThreadReferenceOwnedMonitorsStackDepthInfoOut {
+impl PacketData for ThreadReferenceOwnedMonitorsStackDepthInfoSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.thread.write_to(writer)?;
     Ok(())
@@ -3853,18 +3857,18 @@ impl PacketData for ThreadReferenceOwnedMonitorsStackDepthInfoOut {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let thread = JDWPIDLengthEqObject::read_from(reader, c)?;
-    Ok(ThreadReferenceOwnedMonitorsStackDepthInfoOut { thread })
+    Ok(ThreadReferenceOwnedMonitorsStackDepthInfoSend { thread })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ThreadReferenceOwnedMonitorsStackDepthInfoResponseOwnedRepeated {
+pub struct ThreadReferenceOwnedMonitorsStackDepthInfoReceiveOwnedRepeated {
   /* An owned monitor */
   pub monitor: JDWPTaggedObjectID,
   /* Stack depth location where monitor was acquired */
   pub stack_depth: i32,
 }
 
-impl PacketData for ThreadReferenceOwnedMonitorsStackDepthInfoResponseOwnedRepeated {
+impl PacketData for ThreadReferenceOwnedMonitorsStackDepthInfoReceiveOwnedRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.monitor.write_to(writer)?;
     self.stack_depth.write_to(writer)?;
@@ -3875,7 +3879,7 @@ impl PacketData for ThreadReferenceOwnedMonitorsStackDepthInfoResponseOwnedRepea
     let monitor = JDWPTaggedObjectID::read_from(reader, c)?;
     let stack_depth = i32::read_from(reader, c)?;
     Ok(
-      ThreadReferenceOwnedMonitorsStackDepthInfoResponseOwnedRepeated {
+      ThreadReferenceOwnedMonitorsStackDepthInfoReceiveOwnedRepeated {
         monitor,
         stack_depth,
       },
@@ -3884,14 +3888,14 @@ impl PacketData for ThreadReferenceOwnedMonitorsStackDepthInfoResponseOwnedRepea
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct ThreadReferenceOwnedMonitorsStackDepthInfoResponse {
+pub struct ThreadReferenceOwnedMonitorsStackDepthInfoReceive {
   /* The number of owned monitors */
   pub owned: i32,
   /* Repeated owned times: */
-  pub owned_repeated: Vec<ThreadReferenceOwnedMonitorsStackDepthInfoResponseOwnedRepeated>,
+  pub owned_repeated: Vec<ThreadReferenceOwnedMonitorsStackDepthInfoReceiveOwnedRepeated>,
 }
 
-impl PacketData for ThreadReferenceOwnedMonitorsStackDepthInfoResponse {
+impl PacketData for ThreadReferenceOwnedMonitorsStackDepthInfoReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.owned.write_to(writer)?;
     for item in &self.owned_repeated {
@@ -3905,24 +3909,24 @@ impl PacketData for ThreadReferenceOwnedMonitorsStackDepthInfoResponse {
     let mut owned_repeated = Vec::new();
     for _ in 0..owned {
       owned_repeated.push(
-        ThreadReferenceOwnedMonitorsStackDepthInfoResponseOwnedRepeated::read_from(reader, c)?,
+        ThreadReferenceOwnedMonitorsStackDepthInfoReceiveOwnedRepeated::read_from(reader, c)?,
       );
     }
-    Ok(ThreadReferenceOwnedMonitorsStackDepthInfoResponse {
+    Ok(ThreadReferenceOwnedMonitorsStackDepthInfoReceive {
       owned,
       owned_repeated,
     })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ThreadReferenceForceEarlyReturnOut {
+pub struct ThreadReferenceForceEarlyReturnSend {
   /* The thread object ID. */
   pub thread: JDWPIDLengthEqObject,
   /* The value to return. */
   pub value: JDWPValue,
 }
 
-impl PacketData for ThreadReferenceForceEarlyReturnOut {
+impl PacketData for ThreadReferenceForceEarlyReturnSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.thread.write_to(writer)?;
     self.value.write_to(writer)?;
@@ -3932,16 +3936,16 @@ impl PacketData for ThreadReferenceForceEarlyReturnOut {
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let thread = JDWPIDLengthEqObject::read_from(reader, c)?;
     let value = JDWPValue::read_from(reader, c)?;
-    Ok(ThreadReferenceForceEarlyReturnOut { thread, value })
+    Ok(ThreadReferenceForceEarlyReturnSend { thread, value })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ThreadGroupReferenceNameOut {
+pub struct ThreadGroupReferenceNameSend {
   /* The thread group object ID. */
   pub group: JDWPIDLengthEqObject,
 }
 
-impl PacketData for ThreadGroupReferenceNameOut {
+impl PacketData for ThreadGroupReferenceNameSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.group.write_to(writer)?;
     Ok(())
@@ -3949,16 +3953,16 @@ impl PacketData for ThreadGroupReferenceNameOut {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let group = JDWPIDLengthEqObject::read_from(reader, c)?;
-    Ok(ThreadGroupReferenceNameOut { group })
+    Ok(ThreadGroupReferenceNameSend { group })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ThreadGroupReferenceNameResponse {
+pub struct ThreadGroupReferenceNameReceive {
   /* The thread group's name. */
   pub group_name: JDWPString,
 }
 
-impl PacketData for ThreadGroupReferenceNameResponse {
+impl PacketData for ThreadGroupReferenceNameReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.group_name.write_to(writer)?;
     Ok(())
@@ -3966,16 +3970,16 @@ impl PacketData for ThreadGroupReferenceNameResponse {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let group_name = JDWPString::read_from(reader, c)?;
-    Ok(ThreadGroupReferenceNameResponse { group_name })
+    Ok(ThreadGroupReferenceNameReceive { group_name })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ThreadGroupReferenceParentOut {
+pub struct ThreadGroupReferenceParentSend {
   /* The thread group object ID. */
   pub group: JDWPIDLengthEqObject,
 }
 
-impl PacketData for ThreadGroupReferenceParentOut {
+impl PacketData for ThreadGroupReferenceParentSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.group.write_to(writer)?;
     Ok(())
@@ -3983,16 +3987,16 @@ impl PacketData for ThreadGroupReferenceParentOut {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let group = JDWPIDLengthEqObject::read_from(reader, c)?;
-    Ok(ThreadGroupReferenceParentOut { group })
+    Ok(ThreadGroupReferenceParentSend { group })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ThreadGroupReferenceParentResponse {
+pub struct ThreadGroupReferenceParentReceive {
   /* The parent thread group object, or null if the given thread group is a top-level thread group */
   pub parent_group: JDWPIDLengthEqObject,
 }
 
-impl PacketData for ThreadGroupReferenceParentResponse {
+impl PacketData for ThreadGroupReferenceParentReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.parent_group.write_to(writer)?;
     Ok(())
@@ -4000,16 +4004,16 @@ impl PacketData for ThreadGroupReferenceParentResponse {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let parent_group = JDWPIDLengthEqObject::read_from(reader, c)?;
-    Ok(ThreadGroupReferenceParentResponse { parent_group })
+    Ok(ThreadGroupReferenceParentReceive { parent_group })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ThreadGroupReferenceChildrenOut {
+pub struct ThreadGroupReferenceChildrenSend {
   /* The thread group object ID. */
   pub group: JDWPIDLengthEqObject,
 }
 
-impl PacketData for ThreadGroupReferenceChildrenOut {
+impl PacketData for ThreadGroupReferenceChildrenSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.group.write_to(writer)?;
     Ok(())
@@ -4017,16 +4021,16 @@ impl PacketData for ThreadGroupReferenceChildrenOut {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let group = JDWPIDLengthEqObject::read_from(reader, c)?;
-    Ok(ThreadGroupReferenceChildrenOut { group })
+    Ok(ThreadGroupReferenceChildrenSend { group })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ThreadGroupReferenceChildrenResponseChildThreadsRepeated {
+pub struct ThreadGroupReferenceChildrenReceiveChildThreadsRepeated {
   /* A direct child thread ID. */
   pub child_thread: JDWPIDLengthEqObject,
 }
 
-impl PacketData for ThreadGroupReferenceChildrenResponseChildThreadsRepeated {
+impl PacketData for ThreadGroupReferenceChildrenReceiveChildThreadsRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.child_thread.write_to(writer)?;
     Ok(())
@@ -4034,17 +4038,17 @@ impl PacketData for ThreadGroupReferenceChildrenResponseChildThreadsRepeated {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let child_thread = JDWPIDLengthEqObject::read_from(reader, c)?;
-    Ok(ThreadGroupReferenceChildrenResponseChildThreadsRepeated { child_thread })
+    Ok(ThreadGroupReferenceChildrenReceiveChildThreadsRepeated { child_thread })
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct ThreadGroupReferenceChildrenResponseChildGroupsRepeated {
+pub struct ThreadGroupReferenceChildrenReceiveChildGroupsRepeated {
   /* A direct child thread group ID. */
   pub child_group: JDWPIDLengthEqObject,
 }
 
-impl PacketData for ThreadGroupReferenceChildrenResponseChildGroupsRepeated {
+impl PacketData for ThreadGroupReferenceChildrenReceiveChildGroupsRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.child_group.write_to(writer)?;
     Ok(())
@@ -4052,23 +4056,23 @@ impl PacketData for ThreadGroupReferenceChildrenResponseChildGroupsRepeated {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let child_group = JDWPIDLengthEqObject::read_from(reader, c)?;
-    Ok(ThreadGroupReferenceChildrenResponseChildGroupsRepeated { child_group })
+    Ok(ThreadGroupReferenceChildrenReceiveChildGroupsRepeated { child_group })
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct ThreadGroupReferenceChildrenResponse {
+pub struct ThreadGroupReferenceChildrenReceive {
   /* The number of live child threads. */
   pub child_threads: i32,
   /* Repeated childThreads times: */
-  pub child_threads_repeated: Vec<ThreadGroupReferenceChildrenResponseChildThreadsRepeated>,
+  pub child_threads_repeated: Vec<ThreadGroupReferenceChildrenReceiveChildThreadsRepeated>,
   /* The number of active child thread groups. */
   pub child_groups: i32,
   /* Repeated childGroups times: */
-  pub child_groups_repeated: Vec<ThreadGroupReferenceChildrenResponseChildGroupsRepeated>,
+  pub child_groups_repeated: Vec<ThreadGroupReferenceChildrenReceiveChildGroupsRepeated>,
 }
 
-impl PacketData for ThreadGroupReferenceChildrenResponse {
+impl PacketData for ThreadGroupReferenceChildrenReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.child_threads.write_to(writer)?;
     for item in &self.child_threads_repeated {
@@ -4086,15 +4090,15 @@ impl PacketData for ThreadGroupReferenceChildrenResponse {
     let mut child_threads_repeated = Vec::new();
     for _ in 0..child_threads {
       child_threads_repeated
-        .push(ThreadGroupReferenceChildrenResponseChildThreadsRepeated::read_from(reader, c)?);
+        .push(ThreadGroupReferenceChildrenReceiveChildThreadsRepeated::read_from(reader, c)?);
     }
     let child_groups = i32::read_from(reader, c)?;
     let mut child_groups_repeated = Vec::new();
     for _ in 0..child_groups {
       child_groups_repeated
-        .push(ThreadGroupReferenceChildrenResponseChildGroupsRepeated::read_from(reader, c)?);
+        .push(ThreadGroupReferenceChildrenReceiveChildGroupsRepeated::read_from(reader, c)?);
     }
-    Ok(ThreadGroupReferenceChildrenResponse {
+    Ok(ThreadGroupReferenceChildrenReceive {
       child_threads,
       child_threads_repeated,
       child_groups,
@@ -4103,12 +4107,12 @@ impl PacketData for ThreadGroupReferenceChildrenResponse {
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ArrayReferenceLengthOut {
+pub struct ArrayReferenceLengthSend {
   /* The array object ID. */
   pub array_object: JDWPIDLengthEqObject,
 }
 
-impl PacketData for ArrayReferenceLengthOut {
+impl PacketData for ArrayReferenceLengthSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.array_object.write_to(writer)?;
     Ok(())
@@ -4116,16 +4120,16 @@ impl PacketData for ArrayReferenceLengthOut {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let array_object = JDWPIDLengthEqObject::read_from(reader, c)?;
-    Ok(ArrayReferenceLengthOut { array_object })
+    Ok(ArrayReferenceLengthSend { array_object })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ArrayReferenceLengthResponse {
+pub struct ArrayReferenceLengthReceive {
   /* The length of the array. */
   pub array_length: i32,
 }
 
-impl PacketData for ArrayReferenceLengthResponse {
+impl PacketData for ArrayReferenceLengthReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.array_length.write_to(writer)?;
     Ok(())
@@ -4133,11 +4137,11 @@ impl PacketData for ArrayReferenceLengthResponse {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let array_length = i32::read_from(reader, c)?;
-    Ok(ArrayReferenceLengthResponse { array_length })
+    Ok(ArrayReferenceLengthReceive { array_length })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ArrayReferenceGetValuesOut {
+pub struct ArrayReferenceGetValuesSend {
   /* The array object ID. */
   pub array_object: JDWPIDLengthEqObject,
   /* The first index to retrieve. */
@@ -4146,7 +4150,7 @@ pub struct ArrayReferenceGetValuesOut {
   pub length: i32,
 }
 
-impl PacketData for ArrayReferenceGetValuesOut {
+impl PacketData for ArrayReferenceGetValuesSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.array_object.write_to(writer)?;
     self.first_index.write_to(writer)?;
@@ -4158,7 +4162,7 @@ impl PacketData for ArrayReferenceGetValuesOut {
     let array_object = JDWPIDLengthEqObject::read_from(reader, c)?;
     let first_index = i32::read_from(reader, c)?;
     let length = i32::read_from(reader, c)?;
-    Ok(ArrayReferenceGetValuesOut {
+    Ok(ArrayReferenceGetValuesSend {
       array_object,
       first_index,
       length,
@@ -4166,12 +4170,12 @@ impl PacketData for ArrayReferenceGetValuesOut {
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ArrayReferenceGetValuesResponse {
+pub struct ArrayReferenceGetValuesReceive {
   /* The retrieved values. If the values are objects, they are tagged-values; otherwise, they are untagged-values */
   pub values: JDWPArrayRegion,
 }
 
-impl PacketData for ArrayReferenceGetValuesResponse {
+impl PacketData for ArrayReferenceGetValuesReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.values.write_to(writer)?;
     Ok(())
@@ -4179,16 +4183,16 @@ impl PacketData for ArrayReferenceGetValuesResponse {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let values = JDWPArrayRegion::read_from(reader, c)?;
-    Ok(ArrayReferenceGetValuesResponse { values })
+    Ok(ArrayReferenceGetValuesReceive { values })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ArrayReferenceSetValuesOutValuesRepeated {
+pub struct ArrayReferenceSetValuesSendValuesRepeated {
   /* A value to set. */
   pub value: JDWPValue,
 }
 
-impl PacketData for ArrayReferenceSetValuesOutValuesRepeated {
+impl PacketData for ArrayReferenceSetValuesSendValuesRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.value.write_untagged_to(writer)?;
     Ok(())
@@ -4196,12 +4200,12 @@ impl PacketData for ArrayReferenceSetValuesOutValuesRepeated {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let value = JDWPValue::read_from(reader, c)?;
-    Ok(ArrayReferenceSetValuesOutValuesRepeated { value })
+    Ok(ArrayReferenceSetValuesSendValuesRepeated { value })
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct ArrayReferenceSetValuesOut {
+pub struct ArrayReferenceSetValuesSend {
   /* The array object ID. */
   pub array_object: JDWPIDLengthEqObject,
   /* The first index to set. */
@@ -4209,10 +4213,10 @@ pub struct ArrayReferenceSetValuesOut {
   /* The number of values to set. */
   pub values: i32,
   /* Repeated values times: */
-  pub values_repeated: Vec<ArrayReferenceSetValuesOutValuesRepeated>,
+  pub values_repeated: Vec<ArrayReferenceSetValuesSendValuesRepeated>,
 }
 
-impl PacketData for ArrayReferenceSetValuesOut {
+impl PacketData for ArrayReferenceSetValuesSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.array_object.write_to(writer)?;
     self.first_index.write_to(writer)?;
@@ -4229,11 +4233,11 @@ impl PacketData for ArrayReferenceSetValuesOut {
     let values = i32::read_from(reader, c)?;
     let mut values_repeated = Vec::new();
     for _ in 0..values {
-      values_repeated.push(ArrayReferenceSetValuesOutValuesRepeated::read_from(
+      values_repeated.push(ArrayReferenceSetValuesSendValuesRepeated::read_from(
         reader, c,
       )?);
     }
-    Ok(ArrayReferenceSetValuesOut {
+    Ok(ArrayReferenceSetValuesSend {
       array_object,
       first_index,
       values,
@@ -4242,12 +4246,12 @@ impl PacketData for ArrayReferenceSetValuesOut {
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ClassLoaderReferenceVisibleClassesOut {
+pub struct ClassLoaderReferenceVisibleClassesSend {
   /* The class loader object ID. */
   pub class_loader_object: JDWPIDLengthEqObject,
 }
 
-impl PacketData for ClassLoaderReferenceVisibleClassesOut {
+impl PacketData for ClassLoaderReferenceVisibleClassesSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.class_loader_object.write_to(writer)?;
     Ok(())
@@ -4255,20 +4259,20 @@ impl PacketData for ClassLoaderReferenceVisibleClassesOut {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let class_loader_object = JDWPIDLengthEqObject::read_from(reader, c)?;
-    Ok(ClassLoaderReferenceVisibleClassesOut {
+    Ok(ClassLoaderReferenceVisibleClassesSend {
       class_loader_object,
     })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ClassLoaderReferenceVisibleClassesResponseClassesRepeated {
+pub struct ClassLoaderReferenceVisibleClassesReceiveClassesRepeated {
   /* Kind of following reference type. */
   pub ref_type_tag: i8,
   /* A class visible to this class loader. */
   pub type_id: JDWPIDLengthEqReferenceType,
 }
 
-impl PacketData for ClassLoaderReferenceVisibleClassesResponseClassesRepeated {
+impl PacketData for ClassLoaderReferenceVisibleClassesReceiveClassesRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.ref_type_tag.write_to(writer)?;
     self.type_id.write_to(writer)?;
@@ -4278,7 +4282,7 @@ impl PacketData for ClassLoaderReferenceVisibleClassesResponseClassesRepeated {
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let ref_type_tag = i8::read_from(reader, c)?;
     let type_id = JDWPIDLengthEqReferenceType::read_from(reader, c)?;
-    Ok(ClassLoaderReferenceVisibleClassesResponseClassesRepeated {
+    Ok(ClassLoaderReferenceVisibleClassesReceiveClassesRepeated {
       ref_type_tag,
       type_id,
     })
@@ -4286,14 +4290,14 @@ impl PacketData for ClassLoaderReferenceVisibleClassesResponseClassesRepeated {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct ClassLoaderReferenceVisibleClassesResponse {
+pub struct ClassLoaderReferenceVisibleClassesReceive {
   /* The number of visible classes. */
   pub classes: i32,
   /* Repeated classes times: */
-  pub classes_repeated: Vec<ClassLoaderReferenceVisibleClassesResponseClassesRepeated>,
+  pub classes_repeated: Vec<ClassLoaderReferenceVisibleClassesReceiveClassesRepeated>,
 }
 
-impl PacketData for ClassLoaderReferenceVisibleClassesResponse {
+impl PacketData for ClassLoaderReferenceVisibleClassesReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.classes.write_to(writer)?;
     for item in &self.classes_repeated {
@@ -4307,37 +4311,37 @@ impl PacketData for ClassLoaderReferenceVisibleClassesResponse {
     let mut classes_repeated = Vec::new();
     for _ in 0..classes {
       classes_repeated
-        .push(ClassLoaderReferenceVisibleClassesResponseClassesRepeated::read_from(reader, c)?);
+        .push(ClassLoaderReferenceVisibleClassesReceiveClassesRepeated::read_from(reader, c)?);
     }
-    Ok(ClassLoaderReferenceVisibleClassesResponse {
+    Ok(ClassLoaderReferenceVisibleClassesReceive {
       classes,
       classes_repeated,
     })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub enum EventRequestSetOutModifiersRepeatedModKind {
-  _1(EventRequestSetOutModifiersRepeatedModKind1),
-  _2(EventRequestSetOutModifiersRepeatedModKind2),
-  _3(EventRequestSetOutModifiersRepeatedModKind3),
-  _4(EventRequestSetOutModifiersRepeatedModKind4),
-  _5(EventRequestSetOutModifiersRepeatedModKind5),
-  _6(EventRequestSetOutModifiersRepeatedModKind6),
-  _7(EventRequestSetOutModifiersRepeatedModKind7),
-  _8(EventRequestSetOutModifiersRepeatedModKind8),
-  _9(EventRequestSetOutModifiersRepeatedModKind9),
-  _10(EventRequestSetOutModifiersRepeatedModKind10),
-  _11(EventRequestSetOutModifiersRepeatedModKind11),
-  _12(EventRequestSetOutModifiersRepeatedModKind12),
+pub enum EventRequestSetSendModifiersRepeatedModKind {
+  _1(EventRequestSetSendModifiersRepeatedModKind1),
+  _2(EventRequestSetSendModifiersRepeatedModKind2),
+  _3(EventRequestSetSendModifiersRepeatedModKind3),
+  _4(EventRequestSetSendModifiersRepeatedModKind4),
+  _5(EventRequestSetSendModifiersRepeatedModKind5),
+  _6(EventRequestSetSendModifiersRepeatedModKind6),
+  _7(EventRequestSetSendModifiersRepeatedModKind7),
+  _8(EventRequestSetSendModifiersRepeatedModKind8),
+  _9(EventRequestSetSendModifiersRepeatedModKind9),
+  _10(EventRequestSetSendModifiersRepeatedModKind10),
+  _11(EventRequestSetSendModifiersRepeatedModKind11),
+  _12(EventRequestSetSendModifiersRepeatedModKind12),
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct EventRequestSetOutModifiersRepeatedModKind1 {
+pub struct EventRequestSetSendModifiersRepeatedModKind1 {
   /* Count before event. One for one-off. */
   pub count: i32,
 }
 
-impl PacketData for EventRequestSetOutModifiersRepeatedModKind1 {
+impl PacketData for EventRequestSetSendModifiersRepeatedModKind1 {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.count.write_to(writer)?;
     Ok(())
@@ -4345,17 +4349,17 @@ impl PacketData for EventRequestSetOutModifiersRepeatedModKind1 {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let count = i32::read_from(reader, c)?;
-    Ok(EventRequestSetOutModifiersRepeatedModKind1 { count })
+    Ok(EventRequestSetSendModifiersRepeatedModKind1 { count })
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct EventRequestSetOutModifiersRepeatedModKind2 {
+pub struct EventRequestSetSendModifiersRepeatedModKind2 {
   /* For the future */
   pub expr_id: i32,
 }
 
-impl PacketData for EventRequestSetOutModifiersRepeatedModKind2 {
+impl PacketData for EventRequestSetSendModifiersRepeatedModKind2 {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.expr_id.write_to(writer)?;
     Ok(())
@@ -4363,17 +4367,17 @@ impl PacketData for EventRequestSetOutModifiersRepeatedModKind2 {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let expr_id = i32::read_from(reader, c)?;
-    Ok(EventRequestSetOutModifiersRepeatedModKind2 { expr_id })
+    Ok(EventRequestSetSendModifiersRepeatedModKind2 { expr_id })
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct EventRequestSetOutModifiersRepeatedModKind3 {
+pub struct EventRequestSetSendModifiersRepeatedModKind3 {
   /* Required thread */
   pub thread: JDWPIDLengthEqObject,
 }
 
-impl PacketData for EventRequestSetOutModifiersRepeatedModKind3 {
+impl PacketData for EventRequestSetSendModifiersRepeatedModKind3 {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.thread.write_to(writer)?;
     Ok(())
@@ -4381,17 +4385,17 @@ impl PacketData for EventRequestSetOutModifiersRepeatedModKind3 {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let thread = JDWPIDLengthEqObject::read_from(reader, c)?;
-    Ok(EventRequestSetOutModifiersRepeatedModKind3 { thread })
+    Ok(EventRequestSetSendModifiersRepeatedModKind3 { thread })
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct EventRequestSetOutModifiersRepeatedModKind4 {
+pub struct EventRequestSetSendModifiersRepeatedModKind4 {
   /* Required class */
   pub clazz: JDWPIDLengthEqReferenceType,
 }
 
-impl PacketData for EventRequestSetOutModifiersRepeatedModKind4 {
+impl PacketData for EventRequestSetSendModifiersRepeatedModKind4 {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.clazz.write_to(writer)?;
     Ok(())
@@ -4399,17 +4403,17 @@ impl PacketData for EventRequestSetOutModifiersRepeatedModKind4 {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let clazz = JDWPIDLengthEqReferenceType::read_from(reader, c)?;
-    Ok(EventRequestSetOutModifiersRepeatedModKind4 { clazz })
+    Ok(EventRequestSetSendModifiersRepeatedModKind4 { clazz })
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct EventRequestSetOutModifiersRepeatedModKind5 {
+pub struct EventRequestSetSendModifiersRepeatedModKind5 {
   /* Required class pattern. Matches are limited to exact matches of the given class pattern and matches of patterns that begin or end with '*'; for example, "*.Foo" or "java.*". */
   pub class_pattern: JDWPString,
 }
 
-impl PacketData for EventRequestSetOutModifiersRepeatedModKind5 {
+impl PacketData for EventRequestSetSendModifiersRepeatedModKind5 {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.class_pattern.write_to(writer)?;
     Ok(())
@@ -4417,17 +4421,17 @@ impl PacketData for EventRequestSetOutModifiersRepeatedModKind5 {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let class_pattern = JDWPString::read_from(reader, c)?;
-    Ok(EventRequestSetOutModifiersRepeatedModKind5 { class_pattern })
+    Ok(EventRequestSetSendModifiersRepeatedModKind5 { class_pattern })
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct EventRequestSetOutModifiersRepeatedModKind6 {
+pub struct EventRequestSetSendModifiersRepeatedModKind6 {
   /* Disallowed class pattern. Matches are limited to exact matches of the given class pattern and matches of patterns that begin or end with '*'; for example, "*.Foo" or "java.*". */
   pub class_pattern: JDWPString,
 }
 
-impl PacketData for EventRequestSetOutModifiersRepeatedModKind6 {
+impl PacketData for EventRequestSetSendModifiersRepeatedModKind6 {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.class_pattern.write_to(writer)?;
     Ok(())
@@ -4435,17 +4439,17 @@ impl PacketData for EventRequestSetOutModifiersRepeatedModKind6 {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let class_pattern = JDWPString::read_from(reader, c)?;
-    Ok(EventRequestSetOutModifiersRepeatedModKind6 { class_pattern })
+    Ok(EventRequestSetSendModifiersRepeatedModKind6 { class_pattern })
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct EventRequestSetOutModifiersRepeatedModKind7 {
+pub struct EventRequestSetSendModifiersRepeatedModKind7 {
   /* Required location */
   pub loc: JDWPLocation,
 }
 
-impl PacketData for EventRequestSetOutModifiersRepeatedModKind7 {
+impl PacketData for EventRequestSetSendModifiersRepeatedModKind7 {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.loc.write_to(writer)?;
     Ok(())
@@ -4453,12 +4457,12 @@ impl PacketData for EventRequestSetOutModifiersRepeatedModKind7 {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let loc = JDWPLocation::read_from(reader, c)?;
-    Ok(EventRequestSetOutModifiersRepeatedModKind7 { loc })
+    Ok(EventRequestSetSendModifiersRepeatedModKind7 { loc })
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct EventRequestSetOutModifiersRepeatedModKind8 {
+pub struct EventRequestSetSendModifiersRepeatedModKind8 {
   /* Exception to report. Null (0) means report exceptions of all types. A non-null type restricts the reported exception events to exceptions of the given type or any of its subtypes. */
   pub exception_or_null: JDWPIDLengthEqReferenceType,
   /* Report caught exceptions */
@@ -4467,7 +4471,7 @@ pub struct EventRequestSetOutModifiersRepeatedModKind8 {
   pub uncaught: bool,
 }
 
-impl PacketData for EventRequestSetOutModifiersRepeatedModKind8 {
+impl PacketData for EventRequestSetSendModifiersRepeatedModKind8 {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.exception_or_null.write_to(writer)?;
     self.caught.write_to(writer)?;
@@ -4479,7 +4483,7 @@ impl PacketData for EventRequestSetOutModifiersRepeatedModKind8 {
     let exception_or_null = JDWPIDLengthEqReferenceType::read_from(reader, c)?;
     let caught = bool::read_from(reader, c)?;
     let uncaught = bool::read_from(reader, c)?;
-    Ok(EventRequestSetOutModifiersRepeatedModKind8 {
+    Ok(EventRequestSetSendModifiersRepeatedModKind8 {
       exception_or_null,
       caught,
       uncaught,
@@ -4488,14 +4492,14 @@ impl PacketData for EventRequestSetOutModifiersRepeatedModKind8 {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct EventRequestSetOutModifiersRepeatedModKind9 {
+pub struct EventRequestSetSendModifiersRepeatedModKind9 {
   /* Type in which field is declared. */
   pub declaring: JDWPIDLengthEqReferenceType,
   /* Required field */
   pub field_id: JDWPIDLengthEqField,
 }
 
-impl PacketData for EventRequestSetOutModifiersRepeatedModKind9 {
+impl PacketData for EventRequestSetSendModifiersRepeatedModKind9 {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.declaring.write_to(writer)?;
     self.field_id.write_to(writer)?;
@@ -4505,7 +4509,7 @@ impl PacketData for EventRequestSetOutModifiersRepeatedModKind9 {
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let declaring = JDWPIDLengthEqReferenceType::read_from(reader, c)?;
     let field_id = JDWPIDLengthEqField::read_from(reader, c)?;
-    Ok(EventRequestSetOutModifiersRepeatedModKind9 {
+    Ok(EventRequestSetSendModifiersRepeatedModKind9 {
       declaring,
       field_id,
     })
@@ -4513,7 +4517,7 @@ impl PacketData for EventRequestSetOutModifiersRepeatedModKind9 {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct EventRequestSetOutModifiersRepeatedModKind10 {
+pub struct EventRequestSetSendModifiersRepeatedModKind10 {
   /* Thread in which to step */
   pub thread: JDWPIDLengthEqObject,
   /* size of each step. See JDWP.StepSize */
@@ -4522,7 +4526,7 @@ pub struct EventRequestSetOutModifiersRepeatedModKind10 {
   pub depth: i32,
 }
 
-impl PacketData for EventRequestSetOutModifiersRepeatedModKind10 {
+impl PacketData for EventRequestSetSendModifiersRepeatedModKind10 {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.thread.write_to(writer)?;
     self.size.write_to(writer)?;
@@ -4534,7 +4538,7 @@ impl PacketData for EventRequestSetOutModifiersRepeatedModKind10 {
     let thread = JDWPIDLengthEqObject::read_from(reader, c)?;
     let size = i32::read_from(reader, c)?;
     let depth = i32::read_from(reader, c)?;
-    Ok(EventRequestSetOutModifiersRepeatedModKind10 {
+    Ok(EventRequestSetSendModifiersRepeatedModKind10 {
       thread,
       size,
       depth,
@@ -4543,12 +4547,12 @@ impl PacketData for EventRequestSetOutModifiersRepeatedModKind10 {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct EventRequestSetOutModifiersRepeatedModKind11 {
+pub struct EventRequestSetSendModifiersRepeatedModKind11 {
   /* Required 'this' object */
   pub instance: JDWPIDLengthEqObject,
 }
 
-impl PacketData for EventRequestSetOutModifiersRepeatedModKind11 {
+impl PacketData for EventRequestSetSendModifiersRepeatedModKind11 {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.instance.write_to(writer)?;
     Ok(())
@@ -4556,17 +4560,17 @@ impl PacketData for EventRequestSetOutModifiersRepeatedModKind11 {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let instance = JDWPIDLengthEqObject::read_from(reader, c)?;
-    Ok(EventRequestSetOutModifiersRepeatedModKind11 { instance })
+    Ok(EventRequestSetSendModifiersRepeatedModKind11 { instance })
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct EventRequestSetOutModifiersRepeatedModKind12 {
+pub struct EventRequestSetSendModifiersRepeatedModKind12 {
   /* Required source name pattern. Matches are limited to exact matches of the given pattern and matches of patterns that begin or end with '*'; for example, "*.Foo" or "java.*". */
   pub source_name_pattern: JDWPString,
 }
 
-impl PacketData for EventRequestSetOutModifiersRepeatedModKind12 {
+impl PacketData for EventRequestSetSendModifiersRepeatedModKind12 {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.source_name_pattern.write_to(writer)?;
     Ok(())
@@ -4574,83 +4578,83 @@ impl PacketData for EventRequestSetOutModifiersRepeatedModKind12 {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let source_name_pattern = JDWPString::read_from(reader, c)?;
-    Ok(EventRequestSetOutModifiersRepeatedModKind12 {
+    Ok(EventRequestSetSendModifiersRepeatedModKind12 {
       source_name_pattern,
     })
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct EventRequestSetOutModifiersRepeated {
+pub struct EventRequestSetSendModifiersRepeated {
   /* Modifier kind */
-  pub mod_kind: EventRequestSetOutModifiersRepeatedModKind,
+  pub mod_kind: EventRequestSetSendModifiersRepeatedModKind,
 }
 
-impl PacketData for EventRequestSetOutModifiersRepeated {
+impl PacketData for EventRequestSetSendModifiersRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     match &self.mod_kind {
-      EventRequestSetOutModifiersRepeatedModKind::_1(inner) => inner.write_to(writer)?,
-      EventRequestSetOutModifiersRepeatedModKind::_2(inner) => inner.write_to(writer)?,
-      EventRequestSetOutModifiersRepeatedModKind::_3(inner) => inner.write_to(writer)?,
-      EventRequestSetOutModifiersRepeatedModKind::_4(inner) => inner.write_to(writer)?,
-      EventRequestSetOutModifiersRepeatedModKind::_5(inner) => inner.write_to(writer)?,
-      EventRequestSetOutModifiersRepeatedModKind::_6(inner) => inner.write_to(writer)?,
-      EventRequestSetOutModifiersRepeatedModKind::_7(inner) => inner.write_to(writer)?,
-      EventRequestSetOutModifiersRepeatedModKind::_8(inner) => inner.write_to(writer)?,
-      EventRequestSetOutModifiersRepeatedModKind::_9(inner) => inner.write_to(writer)?,
-      EventRequestSetOutModifiersRepeatedModKind::_10(inner) => inner.write_to(writer)?,
-      EventRequestSetOutModifiersRepeatedModKind::_11(inner) => inner.write_to(writer)?,
-      EventRequestSetOutModifiersRepeatedModKind::_12(inner) => inner.write_to(writer)?,
+      EventRequestSetSendModifiersRepeatedModKind::_1(inner) => inner.write_to(writer)?,
+      EventRequestSetSendModifiersRepeatedModKind::_2(inner) => inner.write_to(writer)?,
+      EventRequestSetSendModifiersRepeatedModKind::_3(inner) => inner.write_to(writer)?,
+      EventRequestSetSendModifiersRepeatedModKind::_4(inner) => inner.write_to(writer)?,
+      EventRequestSetSendModifiersRepeatedModKind::_5(inner) => inner.write_to(writer)?,
+      EventRequestSetSendModifiersRepeatedModKind::_6(inner) => inner.write_to(writer)?,
+      EventRequestSetSendModifiersRepeatedModKind::_7(inner) => inner.write_to(writer)?,
+      EventRequestSetSendModifiersRepeatedModKind::_8(inner) => inner.write_to(writer)?,
+      EventRequestSetSendModifiersRepeatedModKind::_9(inner) => inner.write_to(writer)?,
+      EventRequestSetSendModifiersRepeatedModKind::_10(inner) => inner.write_to(writer)?,
+      EventRequestSetSendModifiersRepeatedModKind::_11(inner) => inner.write_to(writer)?,
+      EventRequestSetSendModifiersRepeatedModKind::_12(inner) => inner.write_to(writer)?,
     }
     Ok(())
   }
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let mod_kind = match u8::read_from(reader, c)? {
-      1 => EventRequestSetOutModifiersRepeatedModKind::_1(
-        EventRequestSetOutModifiersRepeatedModKind1::read_from(reader, c)?,
+      1 => EventRequestSetSendModifiersRepeatedModKind::_1(
+        EventRequestSetSendModifiersRepeatedModKind1::read_from(reader, c)?,
       ),
-      2 => EventRequestSetOutModifiersRepeatedModKind::_2(
-        EventRequestSetOutModifiersRepeatedModKind2::read_from(reader, c)?,
+      2 => EventRequestSetSendModifiersRepeatedModKind::_2(
+        EventRequestSetSendModifiersRepeatedModKind2::read_from(reader, c)?,
       ),
-      3 => EventRequestSetOutModifiersRepeatedModKind::_3(
-        EventRequestSetOutModifiersRepeatedModKind3::read_from(reader, c)?,
+      3 => EventRequestSetSendModifiersRepeatedModKind::_3(
+        EventRequestSetSendModifiersRepeatedModKind3::read_from(reader, c)?,
       ),
-      4 => EventRequestSetOutModifiersRepeatedModKind::_4(
-        EventRequestSetOutModifiersRepeatedModKind4::read_from(reader, c)?,
+      4 => EventRequestSetSendModifiersRepeatedModKind::_4(
+        EventRequestSetSendModifiersRepeatedModKind4::read_from(reader, c)?,
       ),
-      5 => EventRequestSetOutModifiersRepeatedModKind::_5(
-        EventRequestSetOutModifiersRepeatedModKind5::read_from(reader, c)?,
+      5 => EventRequestSetSendModifiersRepeatedModKind::_5(
+        EventRequestSetSendModifiersRepeatedModKind5::read_from(reader, c)?,
       ),
-      6 => EventRequestSetOutModifiersRepeatedModKind::_6(
-        EventRequestSetOutModifiersRepeatedModKind6::read_from(reader, c)?,
+      6 => EventRequestSetSendModifiersRepeatedModKind::_6(
+        EventRequestSetSendModifiersRepeatedModKind6::read_from(reader, c)?,
       ),
-      7 => EventRequestSetOutModifiersRepeatedModKind::_7(
-        EventRequestSetOutModifiersRepeatedModKind7::read_from(reader, c)?,
+      7 => EventRequestSetSendModifiersRepeatedModKind::_7(
+        EventRequestSetSendModifiersRepeatedModKind7::read_from(reader, c)?,
       ),
-      8 => EventRequestSetOutModifiersRepeatedModKind::_8(
-        EventRequestSetOutModifiersRepeatedModKind8::read_from(reader, c)?,
+      8 => EventRequestSetSendModifiersRepeatedModKind::_8(
+        EventRequestSetSendModifiersRepeatedModKind8::read_from(reader, c)?,
       ),
-      9 => EventRequestSetOutModifiersRepeatedModKind::_9(
-        EventRequestSetOutModifiersRepeatedModKind9::read_from(reader, c)?,
+      9 => EventRequestSetSendModifiersRepeatedModKind::_9(
+        EventRequestSetSendModifiersRepeatedModKind9::read_from(reader, c)?,
       ),
-      10 => EventRequestSetOutModifiersRepeatedModKind::_10(
-        EventRequestSetOutModifiersRepeatedModKind10::read_from(reader, c)?,
+      10 => EventRequestSetSendModifiersRepeatedModKind::_10(
+        EventRequestSetSendModifiersRepeatedModKind10::read_from(reader, c)?,
       ),
-      11 => EventRequestSetOutModifiersRepeatedModKind::_11(
-        EventRequestSetOutModifiersRepeatedModKind11::read_from(reader, c)?,
+      11 => EventRequestSetSendModifiersRepeatedModKind::_11(
+        EventRequestSetSendModifiersRepeatedModKind11::read_from(reader, c)?,
       ),
-      12 => EventRequestSetOutModifiersRepeatedModKind::_12(
-        EventRequestSetOutModifiersRepeatedModKind12::read_from(reader, c)?,
+      12 => EventRequestSetSendModifiersRepeatedModKind::_12(
+        EventRequestSetSendModifiersRepeatedModKind12::read_from(reader, c)?,
       ),
       _ => panic!(),
     };
-    Ok(EventRequestSetOutModifiersRepeated { mod_kind })
+    Ok(EventRequestSetSendModifiersRepeated { mod_kind })
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct EventRequestSetOut {
+pub struct EventRequestSetSend {
   /* Event kind to request. See JDWP.EventKind for a complete list of events that can be requested; some events may require a capability in order to be requested. */
   pub event_kind: i8,
   /* What threads are suspended when this event occurs? Note that the order of events and command replies accurately reflects the order in which threads are suspended and resumed. For example, if a VM-wide resume is processed before an event occurs which suspends the VM, the reply to the resume command will be written to the transport before the suspending event. */
@@ -4658,10 +4662,10 @@ pub struct EventRequestSetOut {
   /* Constraints used to control the number of generated events.Modifiers specify additional tests that an event must satisfy before it is placed in the event queue. Events are filtered by applying each modifier to an event in the order they are specified in this collection Only events that satisfy all modifiers are reported. A value of 0 means there are no modifiers in the request.Filtering can improve debugger performance dramatically byreducing the amount of event traffic sent from the target VM to the debugger VM. */
   pub modifiers: i32,
   /* Repeated modifiers times: */
-  pub modifiers_repeated: Vec<EventRequestSetOutModifiersRepeated>,
+  pub modifiers_repeated: Vec<EventRequestSetSendModifiersRepeated>,
 }
 
-impl PacketData for EventRequestSetOut {
+impl PacketData for EventRequestSetSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.event_kind.write_to(writer)?;
     self.suspend_policy.write_to(writer)?;
@@ -4678,9 +4682,9 @@ impl PacketData for EventRequestSetOut {
     let modifiers = i32::read_from(reader, c)?;
     let mut modifiers_repeated = Vec::new();
     for _ in 0..modifiers {
-      modifiers_repeated.push(EventRequestSetOutModifiersRepeated::read_from(reader, c)?);
+      modifiers_repeated.push(EventRequestSetSendModifiersRepeated::read_from(reader, c)?);
     }
-    Ok(EventRequestSetOut {
+    Ok(EventRequestSetSend {
       event_kind,
       suspend_policy,
       modifiers,
@@ -4689,12 +4693,12 @@ impl PacketData for EventRequestSetOut {
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct EventRequestSetResponse {
+pub struct EventRequestSetReceive {
   /* ID of created request */
   pub request_id: i32,
 }
 
-impl PacketData for EventRequestSetResponse {
+impl PacketData for EventRequestSetReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.request_id.write_to(writer)?;
     Ok(())
@@ -4702,18 +4706,18 @@ impl PacketData for EventRequestSetResponse {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let request_id = i32::read_from(reader, c)?;
-    Ok(EventRequestSetResponse { request_id })
+    Ok(EventRequestSetReceive { request_id })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct EventRequestClearOut {
+pub struct EventRequestClearSend {
   /* Event kind to clear */
   pub event_kind: i8,
   /* ID of request to clear */
   pub request_id: i32,
 }
 
-impl PacketData for EventRequestClearOut {
+impl PacketData for EventRequestClearSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.event_kind.write_to(writer)?;
     self.request_id.write_to(writer)?;
@@ -4723,21 +4727,21 @@ impl PacketData for EventRequestClearOut {
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let event_kind = i8::read_from(reader, c)?;
     let request_id = i32::read_from(reader, c)?;
-    Ok(EventRequestClearOut {
+    Ok(EventRequestClearSend {
       event_kind,
       request_id,
     })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct StackFrameGetValuesOutSlotsRepeated {
+pub struct StackFrameGetValuesSendSlotsRepeated {
   /* The local variable's index in the frame. */
   pub slot: i32,
   /* A tag identifying the type of the variable */
   pub sigbyte: i8,
 }
 
-impl PacketData for StackFrameGetValuesOutSlotsRepeated {
+impl PacketData for StackFrameGetValuesSendSlotsRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.slot.write_to(writer)?;
     self.sigbyte.write_to(writer)?;
@@ -4747,12 +4751,12 @@ impl PacketData for StackFrameGetValuesOutSlotsRepeated {
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let slot = i32::read_from(reader, c)?;
     let sigbyte = i8::read_from(reader, c)?;
-    Ok(StackFrameGetValuesOutSlotsRepeated { slot, sigbyte })
+    Ok(StackFrameGetValuesSendSlotsRepeated { slot, sigbyte })
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct StackFrameGetValuesOut {
+pub struct StackFrameGetValuesSend {
   /* The frame's thread. */
   pub thread: JDWPIDLengthEqObject,
   /* The frame ID. */
@@ -4760,10 +4764,10 @@ pub struct StackFrameGetValuesOut {
   /* The number of values to get. */
   pub slots: i32,
   /* Repeated slots times: */
-  pub slots_repeated: Vec<StackFrameGetValuesOutSlotsRepeated>,
+  pub slots_repeated: Vec<StackFrameGetValuesSendSlotsRepeated>,
 }
 
-impl PacketData for StackFrameGetValuesOut {
+impl PacketData for StackFrameGetValuesSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.thread.write_to(writer)?;
     self.frame.write_to(writer)?;
@@ -4780,9 +4784,9 @@ impl PacketData for StackFrameGetValuesOut {
     let slots = i32::read_from(reader, c)?;
     let mut slots_repeated = Vec::new();
     for _ in 0..slots {
-      slots_repeated.push(StackFrameGetValuesOutSlotsRepeated::read_from(reader, c)?);
+      slots_repeated.push(StackFrameGetValuesSendSlotsRepeated::read_from(reader, c)?);
     }
-    Ok(StackFrameGetValuesOut {
+    Ok(StackFrameGetValuesSend {
       thread,
       frame,
       slots,
@@ -4791,12 +4795,12 @@ impl PacketData for StackFrameGetValuesOut {
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct StackFrameGetValuesResponseValuesRepeated {
+pub struct StackFrameGetValuesReceiveValuesRepeated {
   /* The value of the local variable. */
   pub slot_value: JDWPValue,
 }
 
-impl PacketData for StackFrameGetValuesResponseValuesRepeated {
+impl PacketData for StackFrameGetValuesReceiveValuesRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.slot_value.write_to(writer)?;
     Ok(())
@@ -4804,19 +4808,19 @@ impl PacketData for StackFrameGetValuesResponseValuesRepeated {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let slot_value = JDWPValue::read_from(reader, c)?;
-    Ok(StackFrameGetValuesResponseValuesRepeated { slot_value })
+    Ok(StackFrameGetValuesReceiveValuesRepeated { slot_value })
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct StackFrameGetValuesResponse {
+pub struct StackFrameGetValuesReceive {
   /* The number of values retrieved, always equal to slots, the number of values to get. */
   pub values: i32,
   /* Repeated values times: */
-  pub values_repeated: Vec<StackFrameGetValuesResponseValuesRepeated>,
+  pub values_repeated: Vec<StackFrameGetValuesReceiveValuesRepeated>,
 }
 
-impl PacketData for StackFrameGetValuesResponse {
+impl PacketData for StackFrameGetValuesReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.values.write_to(writer)?;
     for item in &self.values_repeated {
@@ -4829,25 +4833,25 @@ impl PacketData for StackFrameGetValuesResponse {
     let values = i32::read_from(reader, c)?;
     let mut values_repeated = Vec::new();
     for _ in 0..values {
-      values_repeated.push(StackFrameGetValuesResponseValuesRepeated::read_from(
+      values_repeated.push(StackFrameGetValuesReceiveValuesRepeated::read_from(
         reader, c,
       )?);
     }
-    Ok(StackFrameGetValuesResponse {
+    Ok(StackFrameGetValuesReceive {
       values,
       values_repeated,
     })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct StackFrameSetValuesOutSlotValuesRepeated {
+pub struct StackFrameSetValuesSendSlotValuesRepeated {
   /* The slot ID. */
   pub slot: i32,
   /* The value to set. */
   pub slot_value: JDWPValue,
 }
 
-impl PacketData for StackFrameSetValuesOutSlotValuesRepeated {
+impl PacketData for StackFrameSetValuesSendSlotValuesRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.slot.write_to(writer)?;
     self.slot_value.write_to(writer)?;
@@ -4857,12 +4861,12 @@ impl PacketData for StackFrameSetValuesOutSlotValuesRepeated {
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let slot = i32::read_from(reader, c)?;
     let slot_value = JDWPValue::read_from(reader, c)?;
-    Ok(StackFrameSetValuesOutSlotValuesRepeated { slot, slot_value })
+    Ok(StackFrameSetValuesSendSlotValuesRepeated { slot, slot_value })
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct StackFrameSetValuesOut {
+pub struct StackFrameSetValuesSend {
   /* The frame's thread. */
   pub thread: JDWPIDLengthEqObject,
   /* The frame ID. */
@@ -4870,10 +4874,10 @@ pub struct StackFrameSetValuesOut {
   /* The number of values to set. */
   pub slot_values: i32,
   /* Repeated slotValues times: */
-  pub slot_values_repeated: Vec<StackFrameSetValuesOutSlotValuesRepeated>,
+  pub slot_values_repeated: Vec<StackFrameSetValuesSendSlotValuesRepeated>,
 }
 
-impl PacketData for StackFrameSetValuesOut {
+impl PacketData for StackFrameSetValuesSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.thread.write_to(writer)?;
     self.frame.write_to(writer)?;
@@ -4890,11 +4894,11 @@ impl PacketData for StackFrameSetValuesOut {
     let slot_values = i32::read_from(reader, c)?;
     let mut slot_values_repeated = Vec::new();
     for _ in 0..slot_values {
-      slot_values_repeated.push(StackFrameSetValuesOutSlotValuesRepeated::read_from(
+      slot_values_repeated.push(StackFrameSetValuesSendSlotValuesRepeated::read_from(
         reader, c,
       )?);
     }
-    Ok(StackFrameSetValuesOut {
+    Ok(StackFrameSetValuesSend {
       thread,
       frame,
       slot_values,
@@ -4903,14 +4907,14 @@ impl PacketData for StackFrameSetValuesOut {
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct StackFrameThisObjectOut {
+pub struct StackFrameThisObjectSend {
   /* The frame's thread. */
   pub thread: JDWPIDLengthEqObject,
   /* The frame ID. */
   pub frame: JDWPIDLengthEqFrame,
 }
 
-impl PacketData for StackFrameThisObjectOut {
+impl PacketData for StackFrameThisObjectSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.thread.write_to(writer)?;
     self.frame.write_to(writer)?;
@@ -4920,16 +4924,16 @@ impl PacketData for StackFrameThisObjectOut {
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let thread = JDWPIDLengthEqObject::read_from(reader, c)?;
     let frame = JDWPIDLengthEqFrame::read_from(reader, c)?;
-    Ok(StackFrameThisObjectOut { thread, frame })
+    Ok(StackFrameThisObjectSend { thread, frame })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct StackFrameThisObjectResponse {
+pub struct StackFrameThisObjectReceive {
   /* The 'this' object for this frame. */
   pub object_this: JDWPTaggedObjectID,
 }
 
-impl PacketData for StackFrameThisObjectResponse {
+impl PacketData for StackFrameThisObjectReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.object_this.write_to(writer)?;
     Ok(())
@@ -4937,18 +4941,18 @@ impl PacketData for StackFrameThisObjectResponse {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let object_this = JDWPTaggedObjectID::read_from(reader, c)?;
-    Ok(StackFrameThisObjectResponse { object_this })
+    Ok(StackFrameThisObjectReceive { object_this })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct StackFramePopFramesOut {
+pub struct StackFramePopFramesSend {
   /* The thread object ID. */
   pub thread: JDWPIDLengthEqObject,
   /* The frame ID. */
   pub frame: JDWPIDLengthEqFrame,
 }
 
-impl PacketData for StackFramePopFramesOut {
+impl PacketData for StackFramePopFramesSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.thread.write_to(writer)?;
     self.frame.write_to(writer)?;
@@ -4958,16 +4962,16 @@ impl PacketData for StackFramePopFramesOut {
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let thread = JDWPIDLengthEqObject::read_from(reader, c)?;
     let frame = JDWPIDLengthEqFrame::read_from(reader, c)?;
-    Ok(StackFramePopFramesOut { thread, frame })
+    Ok(StackFramePopFramesSend { thread, frame })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ClassObjectReferenceReflectedTypeOut {
+pub struct ClassObjectReferenceReflectedTypeSend {
   /* The class object. */
   pub class_object: JDWPIDLengthEqObject,
 }
 
-impl PacketData for ClassObjectReferenceReflectedTypeOut {
+impl PacketData for ClassObjectReferenceReflectedTypeSend {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.class_object.write_to(writer)?;
     Ok(())
@@ -4975,18 +4979,18 @@ impl PacketData for ClassObjectReferenceReflectedTypeOut {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let class_object = JDWPIDLengthEqObject::read_from(reader, c)?;
-    Ok(ClassObjectReferenceReflectedTypeOut { class_object })
+    Ok(ClassObjectReferenceReflectedTypeSend { class_object })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub struct ClassObjectReferenceReflectedTypeResponse {
+pub struct ClassObjectReferenceReflectedTypeReceive {
   /* Kind of following reference type. */
   pub ref_type_tag: i8,
   /* reflected reference type */
   pub type_id: JDWPIDLengthEqReferenceType,
 }
 
-impl PacketData for ClassObjectReferenceReflectedTypeResponse {
+impl PacketData for ClassObjectReferenceReflectedTypeReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.ref_type_tag.write_to(writer)?;
     self.type_id.write_to(writer)?;
@@ -4996,43 +5000,43 @@ impl PacketData for ClassObjectReferenceReflectedTypeResponse {
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let ref_type_tag = i8::read_from(reader, c)?;
     let type_id = JDWPIDLengthEqReferenceType::read_from(reader, c)?;
-    Ok(ClassObjectReferenceReflectedTypeResponse {
+    Ok(ClassObjectReferenceReflectedTypeReceive {
       ref_type_tag,
       type_id,
     })
   }
 }
 #[derive(Debug, PartialEq, Clone)]
-pub enum EventCompositeOutEventsRepeatedEventKind {
-  _VMSTART(EventCompositeOutEventsRepeatedEventKindVMSTART),
-  _SINGLESTEP(EventCompositeOutEventsRepeatedEventKindSINGLESTEP),
-  _BREAKPOINT(EventCompositeOutEventsRepeatedEventKindBREAKPOINT),
-  _METHODENTRY(EventCompositeOutEventsRepeatedEventKindMETHODENTRY),
-  _METHODEXIT(EventCompositeOutEventsRepeatedEventKindMETHODEXIT),
-  _METHODEXITWITHRETURNVALUE(EventCompositeOutEventsRepeatedEventKindMETHODEXITWITHRETURNVALUE),
-  _MONITORCONTENDEDENTER(EventCompositeOutEventsRepeatedEventKindMONITORCONTENDEDENTER),
-  _MONITORCONTENDEDENTERED(EventCompositeOutEventsRepeatedEventKindMONITORCONTENDEDENTERED),
-  _MONITORWAIT(EventCompositeOutEventsRepeatedEventKindMONITORWAIT),
-  _MONITORWAITED(EventCompositeOutEventsRepeatedEventKindMONITORWAITED),
-  _EXCEPTION(EventCompositeOutEventsRepeatedEventKindEXCEPTION),
-  _THREADSTART(EventCompositeOutEventsRepeatedEventKindTHREADSTART),
-  _THREADDEATH(EventCompositeOutEventsRepeatedEventKindTHREADDEATH),
-  _CLASSPREPARE(EventCompositeOutEventsRepeatedEventKindCLASSPREPARE),
-  _CLASSUNLOAD(EventCompositeOutEventsRepeatedEventKindCLASSUNLOAD),
-  _FIELDACCESS(EventCompositeOutEventsRepeatedEventKindFIELDACCESS),
-  _FIELDMODIFICATION(EventCompositeOutEventsRepeatedEventKindFIELDMODIFICATION),
-  _VMDEATH(EventCompositeOutEventsRepeatedEventKindVMDEATH),
+pub enum EventCompositeReceiveEventsRepeatedEventKind {
+  _VMSTART(EventCompositeReceiveEventsRepeatedEventKindVMSTART),
+  _SINGLESTEP(EventCompositeReceiveEventsRepeatedEventKindSINGLESTEP),
+  _BREAKPOINT(EventCompositeReceiveEventsRepeatedEventKindBREAKPOINT),
+  _METHODENTRY(EventCompositeReceiveEventsRepeatedEventKindMETHODENTRY),
+  _METHODEXIT(EventCompositeReceiveEventsRepeatedEventKindMETHODEXIT),
+  _METHODEXITWITHRETURNVALUE(EventCompositeReceiveEventsRepeatedEventKindMETHODEXITWITHRETURNVALUE),
+  _MONITORCONTENDEDENTER(EventCompositeReceiveEventsRepeatedEventKindMONITORCONTENDEDENTER),
+  _MONITORCONTENDEDENTERED(EventCompositeReceiveEventsRepeatedEventKindMONITORCONTENDEDENTERED),
+  _MONITORWAIT(EventCompositeReceiveEventsRepeatedEventKindMONITORWAIT),
+  _MONITORWAITED(EventCompositeReceiveEventsRepeatedEventKindMONITORWAITED),
+  _EXCEPTION(EventCompositeReceiveEventsRepeatedEventKindEXCEPTION),
+  _THREADSTART(EventCompositeReceiveEventsRepeatedEventKindTHREADSTART),
+  _THREADDEATH(EventCompositeReceiveEventsRepeatedEventKindTHREADDEATH),
+  _CLASSPREPARE(EventCompositeReceiveEventsRepeatedEventKindCLASSPREPARE),
+  _CLASSUNLOAD(EventCompositeReceiveEventsRepeatedEventKindCLASSUNLOAD),
+  _FIELDACCESS(EventCompositeReceiveEventsRepeatedEventKindFIELDACCESS),
+  _FIELDMODIFICATION(EventCompositeReceiveEventsRepeatedEventKindFIELDMODIFICATION),
+  _VMDEATH(EventCompositeReceiveEventsRepeatedEventKindVMDEATH),
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct EventCompositeOutEventsRepeatedEventKindVMSTART {
+pub struct EventCompositeReceiveEventsRepeatedEventKindVMSTART {
   /* Request that generated event (or 0 if this event is automatically generated. */
   pub request_id: i32,
   /* Initial thread */
   pub thread: JDWPIDLengthEqObject,
 }
 
-impl PacketData for EventCompositeOutEventsRepeatedEventKindVMSTART {
+impl PacketData for EventCompositeReceiveEventsRepeatedEventKindVMSTART {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.request_id.write_to(writer)?;
     self.thread.write_to(writer)?;
@@ -5042,12 +5046,12 @@ impl PacketData for EventCompositeOutEventsRepeatedEventKindVMSTART {
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let request_id = i32::read_from(reader, c)?;
     let thread = JDWPIDLengthEqObject::read_from(reader, c)?;
-    Ok(EventCompositeOutEventsRepeatedEventKindVMSTART { request_id, thread })
+    Ok(EventCompositeReceiveEventsRepeatedEventKindVMSTART { request_id, thread })
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct EventCompositeOutEventsRepeatedEventKindSINGLESTEP {
+pub struct EventCompositeReceiveEventsRepeatedEventKindSINGLESTEP {
   /* Request that generated event */
   pub request_id: i32,
   /* Stepped thread */
@@ -5056,7 +5060,7 @@ pub struct EventCompositeOutEventsRepeatedEventKindSINGLESTEP {
   pub location: JDWPLocation,
 }
 
-impl PacketData for EventCompositeOutEventsRepeatedEventKindSINGLESTEP {
+impl PacketData for EventCompositeReceiveEventsRepeatedEventKindSINGLESTEP {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.request_id.write_to(writer)?;
     self.thread.write_to(writer)?;
@@ -5068,7 +5072,7 @@ impl PacketData for EventCompositeOutEventsRepeatedEventKindSINGLESTEP {
     let request_id = i32::read_from(reader, c)?;
     let thread = JDWPIDLengthEqObject::read_from(reader, c)?;
     let location = JDWPLocation::read_from(reader, c)?;
-    Ok(EventCompositeOutEventsRepeatedEventKindSINGLESTEP {
+    Ok(EventCompositeReceiveEventsRepeatedEventKindSINGLESTEP {
       request_id,
       thread,
       location,
@@ -5077,7 +5081,7 @@ impl PacketData for EventCompositeOutEventsRepeatedEventKindSINGLESTEP {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct EventCompositeOutEventsRepeatedEventKindBREAKPOINT {
+pub struct EventCompositeReceiveEventsRepeatedEventKindBREAKPOINT {
   /* Request that generated event */
   pub request_id: i32,
   /* Thread which hit breakpoint */
@@ -5086,7 +5090,7 @@ pub struct EventCompositeOutEventsRepeatedEventKindBREAKPOINT {
   pub location: JDWPLocation,
 }
 
-impl PacketData for EventCompositeOutEventsRepeatedEventKindBREAKPOINT {
+impl PacketData for EventCompositeReceiveEventsRepeatedEventKindBREAKPOINT {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.request_id.write_to(writer)?;
     self.thread.write_to(writer)?;
@@ -5098,7 +5102,7 @@ impl PacketData for EventCompositeOutEventsRepeatedEventKindBREAKPOINT {
     let request_id = i32::read_from(reader, c)?;
     let thread = JDWPIDLengthEqObject::read_from(reader, c)?;
     let location = JDWPLocation::read_from(reader, c)?;
-    Ok(EventCompositeOutEventsRepeatedEventKindBREAKPOINT {
+    Ok(EventCompositeReceiveEventsRepeatedEventKindBREAKPOINT {
       request_id,
       thread,
       location,
@@ -5107,7 +5111,7 @@ impl PacketData for EventCompositeOutEventsRepeatedEventKindBREAKPOINT {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct EventCompositeOutEventsRepeatedEventKindMETHODENTRY {
+pub struct EventCompositeReceiveEventsRepeatedEventKindMETHODENTRY {
   /* Request that generated event */
   pub request_id: i32,
   /* Thread which entered method */
@@ -5116,7 +5120,7 @@ pub struct EventCompositeOutEventsRepeatedEventKindMETHODENTRY {
   pub location: JDWPLocation,
 }
 
-impl PacketData for EventCompositeOutEventsRepeatedEventKindMETHODENTRY {
+impl PacketData for EventCompositeReceiveEventsRepeatedEventKindMETHODENTRY {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.request_id.write_to(writer)?;
     self.thread.write_to(writer)?;
@@ -5128,7 +5132,7 @@ impl PacketData for EventCompositeOutEventsRepeatedEventKindMETHODENTRY {
     let request_id = i32::read_from(reader, c)?;
     let thread = JDWPIDLengthEqObject::read_from(reader, c)?;
     let location = JDWPLocation::read_from(reader, c)?;
-    Ok(EventCompositeOutEventsRepeatedEventKindMETHODENTRY {
+    Ok(EventCompositeReceiveEventsRepeatedEventKindMETHODENTRY {
       request_id,
       thread,
       location,
@@ -5137,7 +5141,7 @@ impl PacketData for EventCompositeOutEventsRepeatedEventKindMETHODENTRY {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct EventCompositeOutEventsRepeatedEventKindMETHODEXIT {
+pub struct EventCompositeReceiveEventsRepeatedEventKindMETHODEXIT {
   /* Request that generated event */
   pub request_id: i32,
   /* Thread which exited method */
@@ -5146,7 +5150,7 @@ pub struct EventCompositeOutEventsRepeatedEventKindMETHODEXIT {
   pub location: JDWPLocation,
 }
 
-impl PacketData for EventCompositeOutEventsRepeatedEventKindMETHODEXIT {
+impl PacketData for EventCompositeReceiveEventsRepeatedEventKindMETHODEXIT {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.request_id.write_to(writer)?;
     self.thread.write_to(writer)?;
@@ -5158,7 +5162,7 @@ impl PacketData for EventCompositeOutEventsRepeatedEventKindMETHODEXIT {
     let request_id = i32::read_from(reader, c)?;
     let thread = JDWPIDLengthEqObject::read_from(reader, c)?;
     let location = JDWPLocation::read_from(reader, c)?;
-    Ok(EventCompositeOutEventsRepeatedEventKindMETHODEXIT {
+    Ok(EventCompositeReceiveEventsRepeatedEventKindMETHODEXIT {
       request_id,
       thread,
       location,
@@ -5167,7 +5171,7 @@ impl PacketData for EventCompositeOutEventsRepeatedEventKindMETHODEXIT {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct EventCompositeOutEventsRepeatedEventKindMETHODEXITWITHRETURNVALUE {
+pub struct EventCompositeReceiveEventsRepeatedEventKindMETHODEXITWITHRETURNVALUE {
   /* Request that generated event */
   pub request_id: i32,
   /* Thread which exited method */
@@ -5178,7 +5182,7 @@ pub struct EventCompositeOutEventsRepeatedEventKindMETHODEXITWITHRETURNVALUE {
   pub value: JDWPValue,
 }
 
-impl PacketData for EventCompositeOutEventsRepeatedEventKindMETHODEXITWITHRETURNVALUE {
+impl PacketData for EventCompositeReceiveEventsRepeatedEventKindMETHODEXITWITHRETURNVALUE {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.request_id.write_to(writer)?;
     self.thread.write_to(writer)?;
@@ -5193,7 +5197,7 @@ impl PacketData for EventCompositeOutEventsRepeatedEventKindMETHODEXITWITHRETURN
     let location = JDWPLocation::read_from(reader, c)?;
     let value = JDWPValue::read_from(reader, c)?;
     Ok(
-      EventCompositeOutEventsRepeatedEventKindMETHODEXITWITHRETURNVALUE {
+      EventCompositeReceiveEventsRepeatedEventKindMETHODEXITWITHRETURNVALUE {
         request_id,
         thread,
         location,
@@ -5204,7 +5208,7 @@ impl PacketData for EventCompositeOutEventsRepeatedEventKindMETHODEXITWITHRETURN
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct EventCompositeOutEventsRepeatedEventKindMONITORCONTENDEDENTER {
+pub struct EventCompositeReceiveEventsRepeatedEventKindMONITORCONTENDEDENTER {
   /* Request that generated event */
   pub request_id: i32,
   /* Thread which is trying to enter the monitor */
@@ -5215,7 +5219,7 @@ pub struct EventCompositeOutEventsRepeatedEventKindMONITORCONTENDEDENTER {
   pub location: JDWPLocation,
 }
 
-impl PacketData for EventCompositeOutEventsRepeatedEventKindMONITORCONTENDEDENTER {
+impl PacketData for EventCompositeReceiveEventsRepeatedEventKindMONITORCONTENDEDENTER {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.request_id.write_to(writer)?;
     self.thread.write_to(writer)?;
@@ -5230,7 +5234,7 @@ impl PacketData for EventCompositeOutEventsRepeatedEventKindMONITORCONTENDEDENTE
     let object = JDWPTaggedObjectID::read_from(reader, c)?;
     let location = JDWPLocation::read_from(reader, c)?;
     Ok(
-      EventCompositeOutEventsRepeatedEventKindMONITORCONTENDEDENTER {
+      EventCompositeReceiveEventsRepeatedEventKindMONITORCONTENDEDENTER {
         request_id,
         thread,
         object,
@@ -5241,7 +5245,7 @@ impl PacketData for EventCompositeOutEventsRepeatedEventKindMONITORCONTENDEDENTE
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct EventCompositeOutEventsRepeatedEventKindMONITORCONTENDEDENTERED {
+pub struct EventCompositeReceiveEventsRepeatedEventKindMONITORCONTENDEDENTERED {
   /* Request that generated event */
   pub request_id: i32,
   /* Thread which entered monitor */
@@ -5252,7 +5256,7 @@ pub struct EventCompositeOutEventsRepeatedEventKindMONITORCONTENDEDENTERED {
   pub location: JDWPLocation,
 }
 
-impl PacketData for EventCompositeOutEventsRepeatedEventKindMONITORCONTENDEDENTERED {
+impl PacketData for EventCompositeReceiveEventsRepeatedEventKindMONITORCONTENDEDENTERED {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.request_id.write_to(writer)?;
     self.thread.write_to(writer)?;
@@ -5267,7 +5271,7 @@ impl PacketData for EventCompositeOutEventsRepeatedEventKindMONITORCONTENDEDENTE
     let object = JDWPTaggedObjectID::read_from(reader, c)?;
     let location = JDWPLocation::read_from(reader, c)?;
     Ok(
-      EventCompositeOutEventsRepeatedEventKindMONITORCONTENDEDENTERED {
+      EventCompositeReceiveEventsRepeatedEventKindMONITORCONTENDEDENTERED {
         request_id,
         thread,
         object,
@@ -5278,7 +5282,7 @@ impl PacketData for EventCompositeOutEventsRepeatedEventKindMONITORCONTENDEDENTE
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct EventCompositeOutEventsRepeatedEventKindMONITORWAIT {
+pub struct EventCompositeReceiveEventsRepeatedEventKindMONITORWAIT {
   /* Request that generated event */
   pub request_id: i32,
   /* Thread which is about to wait */
@@ -5291,7 +5295,7 @@ pub struct EventCompositeOutEventsRepeatedEventKindMONITORWAIT {
   pub timeout: i64,
 }
 
-impl PacketData for EventCompositeOutEventsRepeatedEventKindMONITORWAIT {
+impl PacketData for EventCompositeReceiveEventsRepeatedEventKindMONITORWAIT {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.request_id.write_to(writer)?;
     self.thread.write_to(writer)?;
@@ -5307,7 +5311,7 @@ impl PacketData for EventCompositeOutEventsRepeatedEventKindMONITORWAIT {
     let object = JDWPTaggedObjectID::read_from(reader, c)?;
     let location = JDWPLocation::read_from(reader, c)?;
     let timeout = i64::read_from(reader, c)?;
-    Ok(EventCompositeOutEventsRepeatedEventKindMONITORWAIT {
+    Ok(EventCompositeReceiveEventsRepeatedEventKindMONITORWAIT {
       request_id,
       thread,
       object,
@@ -5318,7 +5322,7 @@ impl PacketData for EventCompositeOutEventsRepeatedEventKindMONITORWAIT {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct EventCompositeOutEventsRepeatedEventKindMONITORWAITED {
+pub struct EventCompositeReceiveEventsRepeatedEventKindMONITORWAITED {
   /* Request that generated event */
   pub request_id: i32,
   /* Thread which waited */
@@ -5331,7 +5335,7 @@ pub struct EventCompositeOutEventsRepeatedEventKindMONITORWAITED {
   pub timed_out: bool,
 }
 
-impl PacketData for EventCompositeOutEventsRepeatedEventKindMONITORWAITED {
+impl PacketData for EventCompositeReceiveEventsRepeatedEventKindMONITORWAITED {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.request_id.write_to(writer)?;
     self.thread.write_to(writer)?;
@@ -5347,7 +5351,7 @@ impl PacketData for EventCompositeOutEventsRepeatedEventKindMONITORWAITED {
     let object = JDWPTaggedObjectID::read_from(reader, c)?;
     let location = JDWPLocation::read_from(reader, c)?;
     let timed_out = bool::read_from(reader, c)?;
-    Ok(EventCompositeOutEventsRepeatedEventKindMONITORWAITED {
+    Ok(EventCompositeReceiveEventsRepeatedEventKindMONITORWAITED {
       request_id,
       thread,
       object,
@@ -5358,7 +5362,7 @@ impl PacketData for EventCompositeOutEventsRepeatedEventKindMONITORWAITED {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct EventCompositeOutEventsRepeatedEventKindEXCEPTION {
+pub struct EventCompositeReceiveEventsRepeatedEventKindEXCEPTION {
   /* Request that generated event */
   pub request_id: i32,
   /* Thread with exception */
@@ -5371,7 +5375,7 @@ pub struct EventCompositeOutEventsRepeatedEventKindEXCEPTION {
   pub catch_location: JDWPLocation,
 }
 
-impl PacketData for EventCompositeOutEventsRepeatedEventKindEXCEPTION {
+impl PacketData for EventCompositeReceiveEventsRepeatedEventKindEXCEPTION {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.request_id.write_to(writer)?;
     self.thread.write_to(writer)?;
@@ -5387,7 +5391,7 @@ impl PacketData for EventCompositeOutEventsRepeatedEventKindEXCEPTION {
     let location = JDWPLocation::read_from(reader, c)?;
     let exception = JDWPTaggedObjectID::read_from(reader, c)?;
     let catch_location = JDWPLocation::read_from(reader, c)?;
-    Ok(EventCompositeOutEventsRepeatedEventKindEXCEPTION {
+    Ok(EventCompositeReceiveEventsRepeatedEventKindEXCEPTION {
       request_id,
       thread,
       location,
@@ -5398,14 +5402,14 @@ impl PacketData for EventCompositeOutEventsRepeatedEventKindEXCEPTION {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct EventCompositeOutEventsRepeatedEventKindTHREADSTART {
+pub struct EventCompositeReceiveEventsRepeatedEventKindTHREADSTART {
   /* Request that generated event */
   pub request_id: i32,
   /* Started thread */
   pub thread: JDWPIDLengthEqObject,
 }
 
-impl PacketData for EventCompositeOutEventsRepeatedEventKindTHREADSTART {
+impl PacketData for EventCompositeReceiveEventsRepeatedEventKindTHREADSTART {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.request_id.write_to(writer)?;
     self.thread.write_to(writer)?;
@@ -5415,19 +5419,19 @@ impl PacketData for EventCompositeOutEventsRepeatedEventKindTHREADSTART {
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let request_id = i32::read_from(reader, c)?;
     let thread = JDWPIDLengthEqObject::read_from(reader, c)?;
-    Ok(EventCompositeOutEventsRepeatedEventKindTHREADSTART { request_id, thread })
+    Ok(EventCompositeReceiveEventsRepeatedEventKindTHREADSTART { request_id, thread })
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct EventCompositeOutEventsRepeatedEventKindTHREADDEATH {
+pub struct EventCompositeReceiveEventsRepeatedEventKindTHREADDEATH {
   /* Request that generated event */
   pub request_id: i32,
   /* Ending thread */
   pub thread: JDWPIDLengthEqObject,
 }
 
-impl PacketData for EventCompositeOutEventsRepeatedEventKindTHREADDEATH {
+impl PacketData for EventCompositeReceiveEventsRepeatedEventKindTHREADDEATH {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.request_id.write_to(writer)?;
     self.thread.write_to(writer)?;
@@ -5437,12 +5441,12 @@ impl PacketData for EventCompositeOutEventsRepeatedEventKindTHREADDEATH {
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let request_id = i32::read_from(reader, c)?;
     let thread = JDWPIDLengthEqObject::read_from(reader, c)?;
-    Ok(EventCompositeOutEventsRepeatedEventKindTHREADDEATH { request_id, thread })
+    Ok(EventCompositeReceiveEventsRepeatedEventKindTHREADDEATH { request_id, thread })
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct EventCompositeOutEventsRepeatedEventKindCLASSPREPARE {
+pub struct EventCompositeReceiveEventsRepeatedEventKindCLASSPREPARE {
   /* Request that generated event */
   pub request_id: i32,
   /* Preparing thread. In rare cases, this event may occur in a debugger system thread within the target VM. Debugger threads take precautions to prevent these events, but they cannot be avoided under some conditions, especially for some subclasses of java.lang.Error. If the event was generated by a debugger system thread, the value returned by this method is null, and if the requested  suspend policy for the event was EVENT_THREAD all threads will be suspended instead, and the composite event's suspend policy will reflect this change. Note that the discussion above does not apply to system threads created by the target VM during its normal (non-debug) operation. */
@@ -5457,7 +5461,7 @@ pub struct EventCompositeOutEventsRepeatedEventKindCLASSPREPARE {
   pub status: i32,
 }
 
-impl PacketData for EventCompositeOutEventsRepeatedEventKindCLASSPREPARE {
+impl PacketData for EventCompositeReceiveEventsRepeatedEventKindCLASSPREPARE {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.request_id.write_to(writer)?;
     self.thread.write_to(writer)?;
@@ -5475,7 +5479,7 @@ impl PacketData for EventCompositeOutEventsRepeatedEventKindCLASSPREPARE {
     let type_id = JDWPIDLengthEqReferenceType::read_from(reader, c)?;
     let signature = JDWPString::read_from(reader, c)?;
     let status = i32::read_from(reader, c)?;
-    Ok(EventCompositeOutEventsRepeatedEventKindCLASSPREPARE {
+    Ok(EventCompositeReceiveEventsRepeatedEventKindCLASSPREPARE {
       request_id,
       thread,
       ref_type_tag,
@@ -5487,14 +5491,14 @@ impl PacketData for EventCompositeOutEventsRepeatedEventKindCLASSPREPARE {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct EventCompositeOutEventsRepeatedEventKindCLASSUNLOAD {
+pub struct EventCompositeReceiveEventsRepeatedEventKindCLASSUNLOAD {
   /* Request that generated event */
   pub request_id: i32,
   /* Type signature */
   pub signature: JDWPString,
 }
 
-impl PacketData for EventCompositeOutEventsRepeatedEventKindCLASSUNLOAD {
+impl PacketData for EventCompositeReceiveEventsRepeatedEventKindCLASSUNLOAD {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.request_id.write_to(writer)?;
     self.signature.write_to(writer)?;
@@ -5504,7 +5508,7 @@ impl PacketData for EventCompositeOutEventsRepeatedEventKindCLASSUNLOAD {
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let request_id = i32::read_from(reader, c)?;
     let signature = JDWPString::read_from(reader, c)?;
-    Ok(EventCompositeOutEventsRepeatedEventKindCLASSUNLOAD {
+    Ok(EventCompositeReceiveEventsRepeatedEventKindCLASSUNLOAD {
       request_id,
       signature,
     })
@@ -5512,7 +5516,7 @@ impl PacketData for EventCompositeOutEventsRepeatedEventKindCLASSUNLOAD {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct EventCompositeOutEventsRepeatedEventKindFIELDACCESS {
+pub struct EventCompositeReceiveEventsRepeatedEventKindFIELDACCESS {
   /* Request that generated event */
   pub request_id: i32,
   /* Accessing thread */
@@ -5529,7 +5533,7 @@ pub struct EventCompositeOutEventsRepeatedEventKindFIELDACCESS {
   pub object: JDWPTaggedObjectID,
 }
 
-impl PacketData for EventCompositeOutEventsRepeatedEventKindFIELDACCESS {
+impl PacketData for EventCompositeReceiveEventsRepeatedEventKindFIELDACCESS {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.request_id.write_to(writer)?;
     self.thread.write_to(writer)?;
@@ -5549,7 +5553,7 @@ impl PacketData for EventCompositeOutEventsRepeatedEventKindFIELDACCESS {
     let type_id = JDWPIDLengthEqReferenceType::read_from(reader, c)?;
     let field_id = JDWPIDLengthEqField::read_from(reader, c)?;
     let object = JDWPTaggedObjectID::read_from(reader, c)?;
-    Ok(EventCompositeOutEventsRepeatedEventKindFIELDACCESS {
+    Ok(EventCompositeReceiveEventsRepeatedEventKindFIELDACCESS {
       request_id,
       thread,
       location,
@@ -5562,7 +5566,7 @@ impl PacketData for EventCompositeOutEventsRepeatedEventKindFIELDACCESS {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct EventCompositeOutEventsRepeatedEventKindFIELDMODIFICATION {
+pub struct EventCompositeReceiveEventsRepeatedEventKindFIELDMODIFICATION {
   /* Request that generated event */
   pub request_id: i32,
   /* Modifying thread */
@@ -5581,7 +5585,7 @@ pub struct EventCompositeOutEventsRepeatedEventKindFIELDMODIFICATION {
   pub value_to_be: JDWPValue,
 }
 
-impl PacketData for EventCompositeOutEventsRepeatedEventKindFIELDMODIFICATION {
+impl PacketData for EventCompositeReceiveEventsRepeatedEventKindFIELDMODIFICATION {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.request_id.write_to(writer)?;
     self.thread.write_to(writer)?;
@@ -5603,26 +5607,28 @@ impl PacketData for EventCompositeOutEventsRepeatedEventKindFIELDMODIFICATION {
     let field_id = JDWPIDLengthEqField::read_from(reader, c)?;
     let object = JDWPTaggedObjectID::read_from(reader, c)?;
     let value_to_be = JDWPValue::read_from(reader, c)?;
-    Ok(EventCompositeOutEventsRepeatedEventKindFIELDMODIFICATION {
-      request_id,
-      thread,
-      location,
-      ref_type_tag,
-      type_id,
-      field_id,
-      object,
-      value_to_be,
-    })
+    Ok(
+      EventCompositeReceiveEventsRepeatedEventKindFIELDMODIFICATION {
+        request_id,
+        thread,
+        location,
+        ref_type_tag,
+        type_id,
+        field_id,
+        object,
+        value_to_be,
+      },
+    )
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct EventCompositeOutEventsRepeatedEventKindVMDEATH {
+pub struct EventCompositeReceiveEventsRepeatedEventKindVMDEATH {
   /* Request that generated event */
   pub request_id: i32,
 }
 
-impl PacketData for EventCompositeOutEventsRepeatedEventKindVMDEATH {
+impl PacketData for EventCompositeReceiveEventsRepeatedEventKindVMDEATH {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.request_id.write_to(writer)?;
     Ok(())
@@ -5630,146 +5636,174 @@ impl PacketData for EventCompositeOutEventsRepeatedEventKindVMDEATH {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let request_id = i32::read_from(reader, c)?;
-    Ok(EventCompositeOutEventsRepeatedEventKindVMDEATH { request_id })
+    Ok(EventCompositeReceiveEventsRepeatedEventKindVMDEATH { request_id })
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct EventCompositeOutEventsRepeated {
+pub struct EventCompositeReceiveEventsRepeated {
   /* Event kind selector */
-  pub event_kind: EventCompositeOutEventsRepeatedEventKind,
+  pub event_kind: EventCompositeReceiveEventsRepeatedEventKind,
 }
 
-impl PacketData for EventCompositeOutEventsRepeated {
+impl PacketData for EventCompositeReceiveEventsRepeated {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     match &self.event_kind {
-      EventCompositeOutEventsRepeatedEventKind::_VMSTART(inner) => inner.write_to(writer)?,
-      EventCompositeOutEventsRepeatedEventKind::_SINGLESTEP(inner) => inner.write_to(writer)?,
-      EventCompositeOutEventsRepeatedEventKind::_BREAKPOINT(inner) => inner.write_to(writer)?,
-      EventCompositeOutEventsRepeatedEventKind::_METHODENTRY(inner) => inner.write_to(writer)?,
-      EventCompositeOutEventsRepeatedEventKind::_METHODEXIT(inner) => inner.write_to(writer)?,
-      EventCompositeOutEventsRepeatedEventKind::_METHODEXITWITHRETURNVALUE(inner) => {
+      EventCompositeReceiveEventsRepeatedEventKind::_VMSTART(inner) => inner.write_to(writer)?,
+      EventCompositeReceiveEventsRepeatedEventKind::_SINGLESTEP(inner) => inner.write_to(writer)?,
+      EventCompositeReceiveEventsRepeatedEventKind::_BREAKPOINT(inner) => inner.write_to(writer)?,
+      EventCompositeReceiveEventsRepeatedEventKind::_METHODENTRY(inner) => {
         inner.write_to(writer)?
       }
-      EventCompositeOutEventsRepeatedEventKind::_MONITORCONTENDEDENTER(inner) => {
+      EventCompositeReceiveEventsRepeatedEventKind::_METHODEXIT(inner) => inner.write_to(writer)?,
+      EventCompositeReceiveEventsRepeatedEventKind::_METHODEXITWITHRETURNVALUE(inner) => {
         inner.write_to(writer)?
       }
-      EventCompositeOutEventsRepeatedEventKind::_MONITORCONTENDEDENTERED(inner) => {
+      EventCompositeReceiveEventsRepeatedEventKind::_MONITORCONTENDEDENTER(inner) => {
         inner.write_to(writer)?
       }
-      EventCompositeOutEventsRepeatedEventKind::_MONITORWAIT(inner) => inner.write_to(writer)?,
-      EventCompositeOutEventsRepeatedEventKind::_MONITORWAITED(inner) => inner.write_to(writer)?,
-      EventCompositeOutEventsRepeatedEventKind::_EXCEPTION(inner) => inner.write_to(writer)?,
-      EventCompositeOutEventsRepeatedEventKind::_THREADSTART(inner) => inner.write_to(writer)?,
-      EventCompositeOutEventsRepeatedEventKind::_THREADDEATH(inner) => inner.write_to(writer)?,
-      EventCompositeOutEventsRepeatedEventKind::_CLASSPREPARE(inner) => inner.write_to(writer)?,
-      EventCompositeOutEventsRepeatedEventKind::_CLASSUNLOAD(inner) => inner.write_to(writer)?,
-      EventCompositeOutEventsRepeatedEventKind::_FIELDACCESS(inner) => inner.write_to(writer)?,
-      EventCompositeOutEventsRepeatedEventKind::_FIELDMODIFICATION(inner) => {
+      EventCompositeReceiveEventsRepeatedEventKind::_MONITORCONTENDEDENTERED(inner) => {
         inner.write_to(writer)?
       }
-      EventCompositeOutEventsRepeatedEventKind::_VMDEATH(inner) => inner.write_to(writer)?,
+      EventCompositeReceiveEventsRepeatedEventKind::_MONITORWAIT(inner) => {
+        inner.write_to(writer)?
+      }
+      EventCompositeReceiveEventsRepeatedEventKind::_MONITORWAITED(inner) => {
+        inner.write_to(writer)?
+      }
+      EventCompositeReceiveEventsRepeatedEventKind::_EXCEPTION(inner) => inner.write_to(writer)?,
+      EventCompositeReceiveEventsRepeatedEventKind::_THREADSTART(inner) => {
+        inner.write_to(writer)?
+      }
+      EventCompositeReceiveEventsRepeatedEventKind::_THREADDEATH(inner) => {
+        inner.write_to(writer)?
+      }
+      EventCompositeReceiveEventsRepeatedEventKind::_CLASSPREPARE(inner) => {
+        inner.write_to(writer)?
+      }
+      EventCompositeReceiveEventsRepeatedEventKind::_CLASSUNLOAD(inner) => {
+        inner.write_to(writer)?
+      }
+      EventCompositeReceiveEventsRepeatedEventKind::_FIELDACCESS(inner) => {
+        inner.write_to(writer)?
+      }
+      EventCompositeReceiveEventsRepeatedEventKind::_FIELDMODIFICATION(inner) => {
+        inner.write_to(writer)?
+      }
+      EventCompositeReceiveEventsRepeatedEventKind::_VMDEATH(inner) => inner.write_to(writer)?,
     }
     Ok(())
   }
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let event_kind = match JDWPEventKindConstants::read_from(reader, c)? {
-      JDWPEventKindConstants::VMSTART => EventCompositeOutEventsRepeatedEventKind::_VMSTART(
-        EventCompositeOutEventsRepeatedEventKindVMSTART::read_from(reader, c)?,
+      JDWPEventKindConstants::VMSTART => EventCompositeReceiveEventsRepeatedEventKind::_VMSTART(
+        EventCompositeReceiveEventsRepeatedEventKindVMSTART::read_from(reader, c)?,
       ),
-      JDWPEventKindConstants::SINGLESTEP => EventCompositeOutEventsRepeatedEventKind::_SINGLESTEP(
-        EventCompositeOutEventsRepeatedEventKindSINGLESTEP::read_from(reader, c)?,
-      ),
-      JDWPEventKindConstants::BREAKPOINT => EventCompositeOutEventsRepeatedEventKind::_BREAKPOINT(
-        EventCompositeOutEventsRepeatedEventKindBREAKPOINT::read_from(reader, c)?,
-      ),
-      JDWPEventKindConstants::METHODENTRY => {
-        EventCompositeOutEventsRepeatedEventKind::_METHODENTRY(
-          EventCompositeOutEventsRepeatedEventKindMETHODENTRY::read_from(reader, c)?,
+      JDWPEventKindConstants::SINGLESTEP => {
+        EventCompositeReceiveEventsRepeatedEventKind::_SINGLESTEP(
+          EventCompositeReceiveEventsRepeatedEventKindSINGLESTEP::read_from(reader, c)?,
         )
       }
-      JDWPEventKindConstants::METHODEXIT => EventCompositeOutEventsRepeatedEventKind::_METHODEXIT(
-        EventCompositeOutEventsRepeatedEventKindMETHODEXIT::read_from(reader, c)?,
-      ),
+      JDWPEventKindConstants::BREAKPOINT => {
+        EventCompositeReceiveEventsRepeatedEventKind::_BREAKPOINT(
+          EventCompositeReceiveEventsRepeatedEventKindBREAKPOINT::read_from(reader, c)?,
+        )
+      }
+      JDWPEventKindConstants::METHODENTRY => {
+        EventCompositeReceiveEventsRepeatedEventKind::_METHODENTRY(
+          EventCompositeReceiveEventsRepeatedEventKindMETHODENTRY::read_from(reader, c)?,
+        )
+      }
+      JDWPEventKindConstants::METHODEXIT => {
+        EventCompositeReceiveEventsRepeatedEventKind::_METHODEXIT(
+          EventCompositeReceiveEventsRepeatedEventKindMETHODEXIT::read_from(reader, c)?,
+        )
+      }
       JDWPEventKindConstants::METHODEXITWITHRETURNVALUE => {
-        EventCompositeOutEventsRepeatedEventKind::_METHODEXITWITHRETURNVALUE(
-          EventCompositeOutEventsRepeatedEventKindMETHODEXITWITHRETURNVALUE::read_from(reader, c)?,
+        EventCompositeReceiveEventsRepeatedEventKind::_METHODEXITWITHRETURNVALUE(
+          EventCompositeReceiveEventsRepeatedEventKindMETHODEXITWITHRETURNVALUE::read_from(
+            reader, c,
+          )?,
         )
       }
       JDWPEventKindConstants::MONITORCONTENDEDENTER => {
-        EventCompositeOutEventsRepeatedEventKind::_MONITORCONTENDEDENTER(
-          EventCompositeOutEventsRepeatedEventKindMONITORCONTENDEDENTER::read_from(reader, c)?,
+        EventCompositeReceiveEventsRepeatedEventKind::_MONITORCONTENDEDENTER(
+          EventCompositeReceiveEventsRepeatedEventKindMONITORCONTENDEDENTER::read_from(reader, c)?,
         )
       }
       JDWPEventKindConstants::MONITORCONTENDEDENTERED => {
-        EventCompositeOutEventsRepeatedEventKind::_MONITORCONTENDEDENTERED(
-          EventCompositeOutEventsRepeatedEventKindMONITORCONTENDEDENTERED::read_from(reader, c)?,
+        EventCompositeReceiveEventsRepeatedEventKind::_MONITORCONTENDEDENTERED(
+          EventCompositeReceiveEventsRepeatedEventKindMONITORCONTENDEDENTERED::read_from(
+            reader, c,
+          )?,
         )
       }
       JDWPEventKindConstants::MONITORWAIT => {
-        EventCompositeOutEventsRepeatedEventKind::_MONITORWAIT(
-          EventCompositeOutEventsRepeatedEventKindMONITORWAIT::read_from(reader, c)?,
+        EventCompositeReceiveEventsRepeatedEventKind::_MONITORWAIT(
+          EventCompositeReceiveEventsRepeatedEventKindMONITORWAIT::read_from(reader, c)?,
         )
       }
       JDWPEventKindConstants::MONITORWAITED => {
-        EventCompositeOutEventsRepeatedEventKind::_MONITORWAITED(
-          EventCompositeOutEventsRepeatedEventKindMONITORWAITED::read_from(reader, c)?,
+        EventCompositeReceiveEventsRepeatedEventKind::_MONITORWAITED(
+          EventCompositeReceiveEventsRepeatedEventKindMONITORWAITED::read_from(reader, c)?,
         )
       }
-      JDWPEventKindConstants::EXCEPTION => EventCompositeOutEventsRepeatedEventKind::_EXCEPTION(
-        EventCompositeOutEventsRepeatedEventKindEXCEPTION::read_from(reader, c)?,
-      ),
+      JDWPEventKindConstants::EXCEPTION => {
+        EventCompositeReceiveEventsRepeatedEventKind::_EXCEPTION(
+          EventCompositeReceiveEventsRepeatedEventKindEXCEPTION::read_from(reader, c)?,
+        )
+      }
       JDWPEventKindConstants::THREADSTART => {
-        EventCompositeOutEventsRepeatedEventKind::_THREADSTART(
-          EventCompositeOutEventsRepeatedEventKindTHREADSTART::read_from(reader, c)?,
+        EventCompositeReceiveEventsRepeatedEventKind::_THREADSTART(
+          EventCompositeReceiveEventsRepeatedEventKindTHREADSTART::read_from(reader, c)?,
         )
       }
       JDWPEventKindConstants::THREADDEATH => {
-        EventCompositeOutEventsRepeatedEventKind::_THREADDEATH(
-          EventCompositeOutEventsRepeatedEventKindTHREADDEATH::read_from(reader, c)?,
+        EventCompositeReceiveEventsRepeatedEventKind::_THREADDEATH(
+          EventCompositeReceiveEventsRepeatedEventKindTHREADDEATH::read_from(reader, c)?,
         )
       }
       JDWPEventKindConstants::CLASSPREPARE => {
-        EventCompositeOutEventsRepeatedEventKind::_CLASSPREPARE(
-          EventCompositeOutEventsRepeatedEventKindCLASSPREPARE::read_from(reader, c)?,
+        EventCompositeReceiveEventsRepeatedEventKind::_CLASSPREPARE(
+          EventCompositeReceiveEventsRepeatedEventKindCLASSPREPARE::read_from(reader, c)?,
         )
       }
       JDWPEventKindConstants::CLASSUNLOAD => {
-        EventCompositeOutEventsRepeatedEventKind::_CLASSUNLOAD(
-          EventCompositeOutEventsRepeatedEventKindCLASSUNLOAD::read_from(reader, c)?,
+        EventCompositeReceiveEventsRepeatedEventKind::_CLASSUNLOAD(
+          EventCompositeReceiveEventsRepeatedEventKindCLASSUNLOAD::read_from(reader, c)?,
         )
       }
       JDWPEventKindConstants::FIELDACCESS => {
-        EventCompositeOutEventsRepeatedEventKind::_FIELDACCESS(
-          EventCompositeOutEventsRepeatedEventKindFIELDACCESS::read_from(reader, c)?,
+        EventCompositeReceiveEventsRepeatedEventKind::_FIELDACCESS(
+          EventCompositeReceiveEventsRepeatedEventKindFIELDACCESS::read_from(reader, c)?,
         )
       }
       JDWPEventKindConstants::FIELDMODIFICATION => {
-        EventCompositeOutEventsRepeatedEventKind::_FIELDMODIFICATION(
-          EventCompositeOutEventsRepeatedEventKindFIELDMODIFICATION::read_from(reader, c)?,
+        EventCompositeReceiveEventsRepeatedEventKind::_FIELDMODIFICATION(
+          EventCompositeReceiveEventsRepeatedEventKindFIELDMODIFICATION::read_from(reader, c)?,
         )
       }
-      JDWPEventKindConstants::VMDEATH => EventCompositeOutEventsRepeatedEventKind::_VMDEATH(
-        EventCompositeOutEventsRepeatedEventKindVMDEATH::read_from(reader, c)?,
+      JDWPEventKindConstants::VMDEATH => EventCompositeReceiveEventsRepeatedEventKind::_VMDEATH(
+        EventCompositeReceiveEventsRepeatedEventKindVMDEATH::read_from(reader, c)?,
       ),
       _ => panic!(),
     };
-    Ok(EventCompositeOutEventsRepeated { event_kind })
+    Ok(EventCompositeReceiveEventsRepeated { event_kind })
   }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct EventCompositeOut {
+pub struct EventCompositeReceive {
   /* Which threads where suspended by this composite event? */
   pub suspend_policy: i8,
   /* Events in set. */
   pub events: i32,
   /* Repeated events times: */
-  pub events_repeated: Vec<EventCompositeOutEventsRepeated>,
+  pub events_repeated: Vec<EventCompositeReceiveEventsRepeated>,
 }
 
-impl PacketData for EventCompositeOut {
+impl PacketData for EventCompositeReceive {
   fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
     self.suspend_policy.write_to(writer)?;
     self.events.write_to(writer)?;
@@ -5784,9 +5818,9 @@ impl PacketData for EventCompositeOut {
     let events = i32::read_from(reader, c)?;
     let mut events_repeated = Vec::new();
     for _ in 0..events {
-      events_repeated.push(EventCompositeOutEventsRepeated::read_from(reader, c)?);
+      events_repeated.push(EventCompositeReceiveEventsRepeated::read_from(reader, c)?);
     }
-    Ok(EventCompositeOut {
+    Ok(EventCompositeReceive {
       suspend_policy,
       events,
       events_repeated,

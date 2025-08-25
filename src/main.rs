@@ -1,13 +1,15 @@
-use std::io::Read;
-use std::io::Write;
 use std::sync::Arc;
 
 use tokio::io::AsyncReadExt;
 use tokio::io::AsyncWriteExt;
 use tokio::net::TcpStream;
 
+use crate::defs::VirtualMachineClassesBySignatureSend;
+use crate::packets::JDWPPacketDataFromDebuggee;
+use crate::packets::JDWPPacketDataFromDebugger;
 use crate::packets::NoData;
-use crate::packets::{JDWPCommandPayload, JDWPCommandResponse, receive_packet, send_packet};
+use crate::packets::packet_from_debugger_to_bytes;
+use crate::packets::send_packet;
 use clap::Parser;
 use futures_util::lock::Mutex;
 
@@ -34,7 +36,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   let mut stream = TcpStream::connect(addr.clone()).await?;
   println!("Connected to {}", addr);
 
-  let payloads: Arc<Mutex<Vec<JDWPCommandPayload>>> = Arc::new(Mutex::new(Vec::new()));
+  let payloads: Arc<Mutex<Vec<packets::JDWPPacketDataFromDebugger>>> =
+    Arc::new(Mutex::new(Vec::new()));
   let context = Arc::new(Mutex::new(packets::JDWPContext {
     field_id_size: Option::None,
     method_id_size: Option::None,
@@ -58,6 +61,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   }
   println!("Handshake successful!");
 
+  print!("Get id sizes..");
+  let payload = packets::JDWPPacketDataFromDebugger::VirtualMachineIDSizes(NoData {});
+  payloads.lock().await.push(payload.clone());
+  stream
+    .write_all(&packet_from_debugger_to_bytes(0, &payload))
+    .await?;
+  let mut buf = [0u8; 1024];
+  let amount = stream.read(&mut buf[..]).await?;
+  assert!(amount < 1024);
+  let Some((JDWPPacketDataFromDebuggee::VirtualMachineIDSizes(packet), _)) =
+    packets::receive_packet(
+      &mut &buf[..amount],
+      &payloads.lock().await,
+      &*context.lock().await,
+    )
+    .await
+  else {
+    panic!("Failed to decode packet")
+  };
+  context.lock().await.set_from_id_sizes_response(&packet);
+  println!("..OK!");
+
   // --- ここから非同期で送受信を分離 ---
   let (mut reader, mut writer) = stream.into_split();
 
@@ -77,14 +102,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Ok(n) => {
           // Await the async receive_packet function
-          let received = packets::receive_packet(
+          let packet_and_id = packets::receive_packet(
             &mut &buf[..n],
             &payloads_recv.lock().await,
             &*context_recv.lock().await,
           )
           .await;
 
-          println!("Received packet: {:?}", received);
+          match packet_and_id {
+            Some((packet, id)) => {
+              println!("{}> Received packet: {:?}", id, packet);
+            }
+            None => {
+              eprintln!("Failed to decode packet: {:?}", &buf[..n]);
+            }
+          }
         }
         Err(e) => {
           eprintln!("Read error: {:?}", e);
@@ -96,17 +128,57 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
   // 送信タスク
   let send_task = tokio::spawn(async move {
-    // バージョン情報を得たい
-    let payload = JDWPCommandPayload::VirtualMachineVersion(NoData {});
-    let id = {
-      let mut locked = payloads_send.lock().await;
-      locked.push(payload.clone());
-      locked.len() as i32 - 1
-    };
-    packets::send_packet(&mut writer, id, &payload.clone())
-      .await
-      .unwrap();
-    println!("Sent version request");
+    let mut id = 1;
+    loop {
+      use tokio::io::AsyncBufReadExt;
+      let mut input = String::new();
+      let mut stdin = tokio::io::BufReader::new(tokio::io::stdin());
+      let mut stdout = tokio::io::stdout();
+      stdout
+        .write_all(format!("{}> ", id).as_bytes())
+        .await
+        .unwrap();
+      stdout.flush().await.unwrap();
+      stdin.read_line(&mut input).await.unwrap();
+      if input.trim() == "exit" {
+        println!("Exiting send task.");
+        break;
+      }
+
+      let input_split = input.trim().split(' ').collect::<Vec<&str>>();
+
+      match input_split.first().copied() {
+        Some("version") => {
+          // バージョン情報を得たい
+          let payload = packets::JDWPPacketDataFromDebugger::VirtualMachineVersion(NoData {});
+          payloads_send.lock().await.push(payload.clone());
+          packets::send_packet(&mut writer, id, &payload.clone())
+            .await
+            .unwrap();
+          id += 1;
+        }
+        Some("classes-by-signature") => {
+          if input_split.len() < 2 {
+            println!("Usage: classes-by-signature <class_signature>");
+            continue;
+          }
+          // クラス情報を得たい
+          let payload = packets::JDWPPacketDataFromDebugger::VirtualMachineClassesBySignature(
+            VirtualMachineClassesBySignatureSend {
+              signature: input_split[1].into(),
+            },
+          );
+          payloads_send.lock().await.push(payload.clone());
+          packets::send_packet(&mut writer, id, &payload.clone())
+            .await
+            .unwrap();
+          id += 1;
+        }
+        _ => {
+          println!("Unknown command: {}", input.trim());
+        }
+      }
+    }
   });
 
   tokio::try_join!(recv_task, send_task)?;

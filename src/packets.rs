@@ -20,7 +20,7 @@ pub struct JDWPContext {
 }
 
 impl JDWPContext {
-  pub fn set_from_id_sizes_response(&mut self, response: &VirtualMachineIDSizesResponse) {
+  pub fn set_from_id_sizes_response(&mut self, response: &VirtualMachineIDSizesReceive) {
     self.field_id_size = Some(response.field_idsize as u8);
     self.method_id_size = Some(response.method_idsize as u8);
     self.object_id_size = Some(response.object_idsize as u8);
@@ -81,202 +81,211 @@ impl PacketData for NoData {
   }
 }
 
+// ; で区切り、前半はデバッガリクエスト -> JVM のレスポンス の流れのコマンド。
+// 後半は JVM のリクエスト -> デバッガのレスポンス の流れのコマンド
 macro_rules! jdwp_command_map {
-  ($($name:ident($payload: ty, $response:ty) => ($set:expr, $cmd:expr)),*) => {
+  ($($name:ident($payload: ty, $response:ty) => ($set:expr, $cmd:expr)),*;
+    $($name2:ident($payload2: ty, $response2:ty) => ($set2:expr, $cmd2:expr)),*) => {
+
     #[derive(Debug, PartialEq, Clone)]
-    pub enum JDWPCommandPayload {
-      $($name($payload)),*
+    pub enum JDWPPacketDataFromDebugger {
+      $($name($payload)),*,
+      $($name2($payload2)),*
     }
 
     #[derive(Debug, PartialEq, Clone)]
-    pub enum JDWPCommandResponse {
-      $($name($response)),*
+    pub enum JDWPPacketDataFromDebuggee {
+      $($name($response)),*,
+      $($name2($response2)),*
     }
 
-    pub fn payload_to_int_repr(cmd: &JDWPCommandPayload) -> Option<Vec<u8>> {
-      let mut ret = Vec::new();
-      match cmd {
-        $(JDWPCommandPayload::$name(data) => {
-          ret.push($set);
-          ret.push($cmd);
-          let mut buf = Vec::new();
-          data.write_to(&mut buf).ok()?;
-          ret.extend(buf);
-          Some(ret)
+    // Debugger から送るパケットをバイトに変換
+    pub fn packet_from_debugger_to_bytes(request_id: i32, packet: &JDWPPacketDataFromDebugger) -> Vec<u8> {
+      let mut var = Vec::new();
+
+      match packet {
+        $(JDWPPacketDataFromDebugger::$name(payload) => {
+          (0_u8).write_to(&mut var).unwrap();
+          ($set as u8).write_to(&mut var).unwrap();
+          ($cmd as u8).write_to(&mut var).unwrap();
+          payload.write_to(&mut var).unwrap();
+        }),*
+        $(JDWPPacketDataFromDebugger::$name2(payload2) => {
+          (0x80_u8).write_to(&mut var).unwrap();
+          0_u16.write_to(&mut var).unwrap();
+          payload2.write_to(&mut var).unwrap();
         }),*
       }
+
+      let mut ret = Vec::new();
+      let length = (var.len() + 8) as u32;
+      ret.extend_from_slice(&length.to_be_bytes());
+      ret.extend_from_slice(&request_id.to_be_bytes());
+      ret.extend_from_slice(&var);
+      ret
     }
 
-    pub fn int_repr_to_responce_to(
-      cmd: &JDWPCommandPayload,
-      data: &Vec<u8>,
+    // 受け取ったパケットを解析
+    pub fn parse_packet_from_debuggee(
+      send_from_debugger: &[JDWPPacketDataFromDebugger],
+      data_without_length: &[u8],
       con: &JDWPContext,
-    ) -> Option<JDWPCommandResponse> {
-      let mut cursor = std::io::Cursor::new(data);
-      match cmd {
-        $(JDWPCommandPayload::$name(_) => {
-          <$response>::read_from(&mut cursor, con).ok().map(JDWPCommandResponse::$name)
-        }),*
+    ) -> Option<(JDWPPacketDataFromDebuggee, i32)> {
+      let mut cursor = std::io::Cursor::new(data_without_length);
+      let id = i32::read_from(&mut cursor, con).ok()?;
+      let flags = u8::read_from(&mut cursor, con).ok()?;
+
+      if flags & 0x80 != 0 {
+        // Reply Packet
+        let err_code = u16::read_from(&mut cursor, con).ok()?;
+        if err_code != 0 {
+          panic!("Error code: {}", err_code)
+        }
+
+        match send_from_debugger[id as usize] {
+          $(JDWPPacketDataFromDebugger::$name(_) => {
+            <$response>::read_from(&mut cursor, con).ok().map(|t| (JDWPPacketDataFromDebuggee::$name(t), id))
+          }),*
+          _ => None
+        }
+      } else {
+        let cmd_set = u8::read_from(&mut cursor, con).ok()?;
+        let cmd = u8::read_from(&mut cursor, con).ok()?;
+        match (cmd_set, cmd) {
+          $(
+            ($set2, $cmd2) => {
+              let data = <$response2>::read_from(&mut cursor, con).ok()?;
+              Some((JDWPPacketDataFromDebuggee::$name2(data), id))
+            }
+          ),*
+          _ => None
+        }
       }
     }
   }
 }
 
+// Auto generated
+// Auto generated
 jdwp_command_map!(
-  VirtualMachineVersion(NoData, VirtualMachineVersionResponse) => (1, 1),
-  VirtualMachineClassesBySignature(VirtualMachineClassesBySignatureOut, VirtualMachineClassesBySignatureResponse) => (1, 2),
-  VirtualMachineAllClasses(NoData, VirtualMachineAllClassesResponse) => (1, 3),
-  VirtualMachineAllThreads(NoData, VirtualMachineAllThreadsResponse) => (1, 4),
-  VirtualMachineTopLevelThreadGroups(NoData, VirtualMachineTopLevelThreadGroupsResponse) => (1, 5),
+  VirtualMachineVersion(NoData, VirtualMachineVersionReceive) => (1, 1),
+  VirtualMachineClassesBySignature(VirtualMachineClassesBySignatureSend, VirtualMachineClassesBySignatureReceive) => (1, 2),
+  VirtualMachineAllClasses(NoData, VirtualMachineAllClassesReceive) => (1, 3),
+  VirtualMachineAllThreads(NoData, VirtualMachineAllThreadsReceive) => (1, 4),
+  VirtualMachineTopLevelThreadGroups(NoData, VirtualMachineTopLevelThreadGroupsReceive) => (1, 5),
   VirtualMachineDispose(NoData, NoData) => (1, 6),
-  VirtualMachineIDSizes(NoData, VirtualMachineIDSizesResponse) => (1, 7),
+  VirtualMachineIDSizes(NoData, VirtualMachineIDSizesReceive) => (1, 7),
   VirtualMachineSuspend(NoData, NoData) => (1, 8),
   VirtualMachineResume(NoData, NoData) => (1, 9),
-  VirtualMachineExit(VirtualMachineExitOut, NoData) => (1, 10),
-  VirtualMachineCreateString(VirtualMachineCreateStringOut, VirtualMachineCreateStringResponse) => (1, 11),
-  VirtualMachineCapabilities(NoData, VirtualMachineCapabilitiesResponse) => (1, 12),
-  VirtualMachineClassPaths(NoData, VirtualMachineClassPathsResponse) => (1, 13),
-  VirtualMachineDisposeObjects(VirtualMachineDisposeObjectsOut, NoData) => (1, 14),
+  VirtualMachineExit(VirtualMachineExitSend, NoData) => (1, 10),
+  VirtualMachineCreateString(VirtualMachineCreateStringSend, VirtualMachineCreateStringReceive) => (1, 11),
+  VirtualMachineCapabilities(NoData, VirtualMachineCapabilitiesReceive) => (1, 12),
+  VirtualMachineClassPaths(NoData, VirtualMachineClassPathsReceive) => (1, 13),
+  VirtualMachineDisposeObjects(VirtualMachineDisposeObjectsSend, NoData) => (1, 14),
   VirtualMachineHoldEvents(NoData, NoData) => (1, 15),
   VirtualMachineReleaseEvents(NoData, NoData) => (1, 16),
-  VirtualMachineCapabilitiesNew(NoData, VirtualMachineCapabilitiesNewResponse) => (1, 17),
-  VirtualMachineRedefineClasses(VirtualMachineRedefineClassesOut, NoData) => (1, 18),
-  VirtualMachineSetDefaultStratum(VirtualMachineSetDefaultStratumOut, NoData) => (1, 19),
-  VirtualMachineAllClassesWithGeneric(NoData, VirtualMachineAllClassesWithGenericResponse) => (1, 20),
-  VirtualMachineInstanceCounts(VirtualMachineInstanceCountsOut, VirtualMachineInstanceCountsResponse) => (1, 21),
-  ReferenceTypeSignature(ReferenceTypeSignatureOut, ReferenceTypeSignatureResponse) => (2, 1),
-  ReferenceTypeClassLoader(ReferenceTypeClassLoaderOut, ReferenceTypeClassLoaderResponse) => (2, 2),
-  ReferenceTypeModifiers(ReferenceTypeModifiersOut, ReferenceTypeModifiersResponse) => (2, 3),
-  ReferenceTypeFields(ReferenceTypeFieldsOut, ReferenceTypeFieldsResponse) => (2, 4),
-  ReferenceTypeMethods(ReferenceTypeMethodsOut, ReferenceTypeMethodsResponse) => (2, 5),
-  ReferenceTypeGetValues(ReferenceTypeGetValuesOut, ReferenceTypeGetValuesResponse) => (2, 6),
-  ReferenceTypeSourceFile(ReferenceTypeSourceFileOut, ReferenceTypeSourceFileResponse) => (2, 7),
-  ReferenceTypeNestedTypes(ReferenceTypeNestedTypesOut, ReferenceTypeNestedTypesResponse) => (2, 8),
-  ReferenceTypeStatus(ReferenceTypeStatusOut, ReferenceTypeStatusResponse) => (2, 9),
-  ReferenceTypeInterfaces(ReferenceTypeInterfacesOut, ReferenceTypeInterfacesResponse) => (2, 10),
-  ReferenceTypeClassObject(ReferenceTypeClassObjectOut, ReferenceTypeClassObjectResponse) => (2, 11),
-  ReferenceTypeSourceDebugExtension(ReferenceTypeSourceDebugExtensionOut, ReferenceTypeSourceDebugExtensionResponse) => (2, 12),
-  ReferenceTypeSignatureWithGeneric(ReferenceTypeSignatureWithGenericOut, ReferenceTypeSignatureWithGenericResponse) => (2, 13),
-  ReferenceTypeFieldsWithGeneric(ReferenceTypeFieldsWithGenericOut, ReferenceTypeFieldsWithGenericResponse) => (2, 14),
-  ReferenceTypeMethodsWithGeneric(ReferenceTypeMethodsWithGenericOut, ReferenceTypeMethodsWithGenericResponse) => (2, 15),
-  ReferenceTypeInstances(ReferenceTypeInstancesOut, ReferenceTypeInstancesResponse) => (2, 16),
-  ReferenceTypeClassFileVersion(ReferenceTypeClassFileVersionOut, ReferenceTypeClassFileVersionResponse) => (2, 17),
-  ReferenceTypeConstantPool(ReferenceTypeConstantPoolOut, ReferenceTypeConstantPoolResponse) => (2, 18),
-  ClassTypeSuperclass(ClassTypeSuperclassOut, ClassTypeSuperclassResponse) => (3, 1),
-  ClassTypeSetValues(ClassTypeSetValuesOut, NoData) => (3, 2),
-  ClassTypeInvokeMethod(ClassTypeInvokeMethodOut, ClassTypeInvokeMethodResponse) => (3, 3),
-  ClassTypeNewInstance(ClassTypeNewInstanceOut, ClassTypeNewInstanceResponse) => (3, 4),
-  ArrayTypeNewInstance(ArrayTypeNewInstanceOut, ArrayTypeNewInstanceResponse) => (4, 1),
-  InterfaceTypeInvokeMethod(InterfaceTypeInvokeMethodOut, InterfaceTypeInvokeMethodResponse) => (5, 1),
-  MethodLineTable(MethodLineTableOut, MethodLineTableResponse) => (6, 1),
-  MethodVariableTable(MethodVariableTableOut, MethodVariableTableResponse) => (6, 2),
-  MethodBytecodes(MethodBytecodesOut, MethodBytecodesResponse) => (6, 3),
-  MethodIsObsolete(MethodIsObsoleteOut, MethodIsObsoleteResponse) => (6, 4),
-  MethodVariableTableWithGeneric(MethodVariableTableWithGenericOut, MethodVariableTableWithGenericResponse) => (6, 5),
-  ObjectReferenceReferenceType(ObjectReferenceReferenceTypeOut, ObjectReferenceReferenceTypeResponse) => (9, 1),
-  ObjectReferenceGetValues(ObjectReferenceGetValuesOut, ObjectReferenceGetValuesResponse) => (9, 2),
-  ObjectReferenceSetValues(ObjectReferenceSetValuesOut, NoData) => (9, 3),
-  ObjectReferenceMonitorInfo(ObjectReferenceMonitorInfoOut, ObjectReferenceMonitorInfoResponse) => (9, 5),
-  ObjectReferenceInvokeMethod(ObjectReferenceInvokeMethodOut, ObjectReferenceInvokeMethodResponse) => (9, 6),
-  ObjectReferenceDisableCollection(ObjectReferenceDisableCollectionOut, NoData) => (9, 7),
-  ObjectReferenceEnableCollection(ObjectReferenceEnableCollectionOut, NoData) => (9, 8),
-  ObjectReferenceIsCollected(ObjectReferenceIsCollectedOut, ObjectReferenceIsCollectedResponse) => (9, 9),
-  ObjectReferenceReferringObjects(ObjectReferenceReferringObjectsOut, ObjectReferenceReferringObjectsResponse) => (9, 10),
-  StringReferenceValue(StringReferenceValueOut, StringReferenceValueResponse) => (10, 1),
-  ThreadReferenceName(ThreadReferenceNameOut, ThreadReferenceNameResponse) => (11, 1),
-  ThreadReferenceSuspend(NoData, NoData) => (11, 2),
-  ThreadReferenceResume(NoData, NoData) => (11, 3),
-  ThreadReferenceStatus(ThreadReferenceStatusOut, ThreadReferenceStatusResponse) => (11, 4),
-  ThreadReferenceThreadGroup(NoData, ThreadReferenceThreadGroupResponse) => (11, 5),
-  ThreadReferenceFrames(ThreadReferenceFramesOut, ThreadReferenceFramesResponse) => (11, 6),
-  ThreadReferenceFrameCount(ThreadReferenceFrameCountOut, ThreadReferenceFrameCountResponse) => (11, 7),
-  ThreadReferenceOwnedMonitors(ThreadReferenceOwnedMonitorsOut, ThreadReferenceOwnedMonitorsResponse) => (11, 8),
-  ThreadReferenceCurrentContendedMonitor(ThreadReferenceCurrentContendedMonitorOut, ThreadReferenceCurrentContendedMonitorResponse) => (11, 9),
-  ThreadReferenceStop(ThreadReferenceStopOut, NoData) => (11, 10),
-  ThreadReferenceInterrupt(ThreadReferenceInterruptOut, NoData) => (11, 11),
-  ThreadReferenceSuspendCount(ThreadReferenceSuspendCountOut, ThreadReferenceSuspendCountResponse) => (11, 12),
-  ThreadReferenceOwnedMonitorsStackDepthInfo(ThreadReferenceOwnedMonitorsStackDepthInfoOut, ThreadReferenceOwnedMonitorsStackDepthInfoResponse) => (11, 13),
-  ThreadReferenceForceEarlyReturn(ThreadReferenceForceEarlyReturnOut, NoData) => (11, 14),
-  ThreadGroupReferenceName(ThreadGroupReferenceNameOut, ThreadGroupReferenceNameResponse) => (12, 1),
-  ThreadGroupReferenceParent(ThreadGroupReferenceParentOut, ThreadGroupReferenceParentResponse) => (12, 2),
-  ThreadGroupReferenceChildren(ThreadGroupReferenceChildrenOut, ThreadGroupReferenceChildrenResponse) => (12, 3),
-  ArrayReferenceLength(ArrayReferenceLengthOut, ArrayReferenceLengthResponse) => (13, 1),
-  ArrayReferenceGetValues(ArrayReferenceGetValuesOut, ArrayReferenceGetValuesResponse) => (13, 2),
-  ArrayReferenceSetValues(ArrayReferenceSetValuesOut, NoData) => (13, 3),
-  ClassLoaderReferenceVisibleClasses(ClassLoaderReferenceVisibleClassesOut, ClassLoaderReferenceVisibleClassesResponse) => (14, 1),
-  EventRequestSet(EventRequestSetOut, NoData) => (15, 1),
-  EventRequestClear(EventRequestClearOut, NoData) => (15, 2),
+  VirtualMachineCapabilitiesNew(NoData, VirtualMachineCapabilitiesNewReceive) => (1, 17),
+  VirtualMachineRedefineClasses(VirtualMachineRedefineClassesSend, NoData) => (1, 18),
+  VirtualMachineSetDefaultStratum(VirtualMachineSetDefaultStratumSend, NoData) => (1, 19),
+  VirtualMachineAllClassesWithGeneric(NoData, VirtualMachineAllClassesWithGenericReceive) => (1, 20),
+  VirtualMachineInstanceCounts(VirtualMachineInstanceCountsSend, VirtualMachineInstanceCountsReceive) => (1, 21),
+  ReferenceTypeSignature(ReferenceTypeSignatureSend, ReferenceTypeSignatureReceive) => (2, 1),
+  ReferenceTypeClassLoader(ReferenceTypeClassLoaderSend, ReferenceTypeClassLoaderReceive) => (2, 2),
+  ReferenceTypeModifiers(ReferenceTypeModifiersSend, ReferenceTypeModifiersReceive) => (2, 3),
+  ReferenceTypeFields(ReferenceTypeFieldsSend, ReferenceTypeFieldsReceive) => (2, 4),
+  ReferenceTypeMethods(ReferenceTypeMethodsSend, ReferenceTypeMethodsReceive) => (2, 5),
+  ReferenceTypeGetValues(ReferenceTypeGetValuesSend, ReferenceTypeGetValuesReceive) => (2, 6),
+  ReferenceTypeSourceFile(ReferenceTypeSourceFileSend, ReferenceTypeSourceFileReceive) => (2, 7),
+  ReferenceTypeNestedTypes(ReferenceTypeNestedTypesSend, ReferenceTypeNestedTypesReceive) => (2, 8),
+  ReferenceTypeStatus(ReferenceTypeStatusSend, ReferenceTypeStatusReceive) => (2, 9),
+  ReferenceTypeInterfaces(ReferenceTypeInterfacesSend, ReferenceTypeInterfacesReceive) => (2, 10),
+  ReferenceTypeClassObject(ReferenceTypeClassObjectSend, ReferenceTypeClassObjectReceive) => (2, 11),
+  ReferenceTypeSourceDebugExtension(ReferenceTypeSourceDebugExtensionSend, ReferenceTypeSourceDebugExtensionReceive) => (2, 12),
+  ReferenceTypeSignatureWithGeneric(ReferenceTypeSignatureWithGenericSend, ReferenceTypeSignatureWithGenericReceive) => (2, 13),
+  ReferenceTypeFieldsWithGeneric(ReferenceTypeFieldsWithGenericSend, ReferenceTypeFieldsWithGenericReceive) => (2, 14),
+  ReferenceTypeMethodsWithGeneric(ReferenceTypeMethodsWithGenericSend, ReferenceTypeMethodsWithGenericReceive) => (2, 15),
+  ReferenceTypeInstances(ReferenceTypeInstancesSend, ReferenceTypeInstancesReceive) => (2, 16),
+  ReferenceTypeClassFileVersion(ReferenceTypeClassFileVersionSend, ReferenceTypeClassFileVersionReceive) => (2, 17),
+  ReferenceTypeConstantPool(ReferenceTypeConstantPoolSend, ReferenceTypeConstantPoolReceive) => (2, 18),
+  ClassTypeSuperclass(ClassTypeSuperclassSend, ClassTypeSuperclassReceive) => (3, 1),
+  ClassTypeSetValues(ClassTypeSetValuesSend, NoData) => (3, 2),
+  ClassTypeInvokeMethod(ClassTypeInvokeMethodSend, ClassTypeInvokeMethodReceive) => (3, 3),
+  ClassTypeNewInstance(ClassTypeNewInstanceSend, ClassTypeNewInstanceReceive) => (3, 4),
+  ArrayTypeNewInstance(ArrayTypeNewInstanceSend, ArrayTypeNewInstanceReceive) => (4, 1),
+  InterfaceTypeInvokeMethod(InterfaceTypeInvokeMethodSend, InterfaceTypeInvokeMethodReceive) => (5, 1),
+  MethodLineTable(MethodLineTableSend, MethodLineTableReceive) => (6, 1),
+  MethodVariableTable(MethodVariableTableSend, MethodVariableTableReceive) => (6, 2),
+  MethodBytecodes(MethodBytecodesSend, MethodBytecodesReceive) => (6, 3),
+  MethodIsObsolete(MethodIsObsoleteSend, MethodIsObsoleteReceive) => (6, 4),
+  MethodVariableTableWithGeneric(MethodVariableTableWithGenericSend, MethodVariableTableWithGenericReceive) => (6, 5),
+  ObjectReferenceReferenceType(ObjectReferenceReferenceTypeSend, ObjectReferenceReferenceTypeReceive) => (9, 1),
+  ObjectReferenceGetValues(ObjectReferenceGetValuesSend, ObjectReferenceGetValuesReceive) => (9, 2),
+  ObjectReferenceSetValues(ObjectReferenceSetValuesSend, NoData) => (9, 3),
+  ObjectReferenceMonitorInfo(ObjectReferenceMonitorInfoSend, ObjectReferenceMonitorInfoReceive) => (9, 5),
+  ObjectReferenceInvokeMethod(ObjectReferenceInvokeMethodSend, ObjectReferenceInvokeMethodReceive) => (9, 6),
+  ObjectReferenceDisableCollection(ObjectReferenceDisableCollectionSend, NoData) => (9, 7),
+  ObjectReferenceEnableCollection(ObjectReferenceEnableCollectionSend, NoData) => (9, 8),
+  ObjectReferenceIsCollected(ObjectReferenceIsCollectedSend, ObjectReferenceIsCollectedReceive) => (9, 9),
+  ObjectReferenceReferringObjects(ObjectReferenceReferringObjectsSend, ObjectReferenceReferringObjectsReceive) => (9, 10),
+  StringReferenceValue(StringReferenceValueSend, StringReferenceValueReceive) => (10, 1),
+  ThreadReferenceName(ThreadReferenceNameSend, ThreadReferenceNameReceive) => (11, 1),
+  ThreadReferenceSuspend(ThreadReferenceSuspendSend, NoData) => (11, 2),
+  ThreadReferenceResume(ThreadReferenceResumeSend, NoData) => (11, 3),
+  ThreadReferenceStatus(ThreadReferenceStatusSend, ThreadReferenceStatusReceive) => (11, 4),
+  ThreadReferenceThreadGroup(ThreadReferenceThreadGroupSend, ThreadReferenceThreadGroupReceive) => (11, 5),
+  ThreadReferenceFrames(ThreadReferenceFramesSend, ThreadReferenceFramesReceive) => (11, 6),
+  ThreadReferenceFrameCount(ThreadReferenceFrameCountSend, ThreadReferenceFrameCountReceive) => (11, 7),
+  ThreadReferenceOwnedMonitors(ThreadReferenceOwnedMonitorsSend, ThreadReferenceOwnedMonitorsReceive) => (11, 8),
+  ThreadReferenceCurrentContendedMonitor(ThreadReferenceCurrentContendedMonitorSend, ThreadReferenceCurrentContendedMonitorReceive) => (11, 9),
+  ThreadReferenceStop(ThreadReferenceStopSend, NoData) => (11, 10),
+  ThreadReferenceInterrupt(ThreadReferenceInterruptSend, NoData) => (11, 11),
+  ThreadReferenceSuspendCount(ThreadReferenceSuspendCountSend, ThreadReferenceSuspendCountReceive) => (11, 12),
+  ThreadReferenceOwnedMonitorsStackDepthInfo(ThreadReferenceOwnedMonitorsStackDepthInfoSend, ThreadReferenceOwnedMonitorsStackDepthInfoReceive) => (11, 13),
+  ThreadReferenceForceEarlyReturn(ThreadReferenceForceEarlyReturnSend, NoData) => (11, 14),
+  ThreadGroupReferenceName(ThreadGroupReferenceNameSend, ThreadGroupReferenceNameReceive) => (12, 1),
+  ThreadGroupReferenceParent(ThreadGroupReferenceParentSend, ThreadGroupReferenceParentReceive) => (12, 2),
+  ThreadGroupReferenceChildren(ThreadGroupReferenceChildrenSend, ThreadGroupReferenceChildrenReceive) => (12, 3),
+  ArrayReferenceLength(ArrayReferenceLengthSend, ArrayReferenceLengthReceive) => (13, 1),
+  ArrayReferenceGetValues(ArrayReferenceGetValuesSend, ArrayReferenceGetValuesReceive) => (13, 2),
+  ArrayReferenceSetValues(ArrayReferenceSetValuesSend, NoData) => (13, 3),
+  ClassLoaderReferenceVisibleClasses(ClassLoaderReferenceVisibleClassesSend, ClassLoaderReferenceVisibleClassesReceive) => (14, 1),
+  EventRequestSet(EventRequestSetSend, EventRequestSetReceive) => (15, 1),
+  EventRequestClear(EventRequestClearSend, NoData) => (15, 2),
   EventRequestClearAllBreakpoints(NoData, NoData) => (15, 3),
-  StackFrameGetValues(StackFrameGetValuesOut, StackFrameGetValuesResponse) => (16, 1),
-  StackFrameSetValues(StackFrameSetValuesOut, NoData) => (16, 2),
-  StackFrameThisObject(StackFrameThisObjectOut, StackFrameThisObjectResponse) => (16, 3),
-  StackFramePopFrames(StackFramePopFramesOut, NoData) => (16, 4),
-  ClassObjectReferenceReflectedType(ClassObjectReferenceReflectedTypeOut, ClassObjectReferenceReflectedTypeResponse) => (17, 1),
-  EventComposite(EventCompositeOut, NoData) => (64, 100)
+  StackFrameGetValues(StackFrameGetValuesSend, StackFrameGetValuesReceive) => (16, 1),
+  StackFrameSetValues(StackFrameSetValuesSend, NoData) => (16, 2),
+  StackFrameThisObject(StackFrameThisObjectSend, StackFrameThisObjectReceive) => (16, 3),
+  StackFramePopFrames(StackFramePopFramesSend, NoData) => (16, 4),
+  ClassObjectReferenceReflectedType(ClassObjectReferenceReflectedTypeSend, ClassObjectReferenceReflectedTypeReceive) => (17, 1)
+  ;
+  EventComposite(NoData, EventCompositeReceive) => (64, 100)
 );
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct JDWPReplyPacket {
-  pub length: i32,
-  pub id: i32,
-  pub flags: u8,
-  pub error_code: u16,
-  pub data: JDWPCommandResponse,
-}
 
 pub async fn send_packet<W: AsyncWrite + Unpin>(
   stream: &mut W,
   id: i32,
-  cmd: &JDWPCommandPayload,
+  packet: &JDWPPacketDataFromDebugger,
 ) -> Result<(), std::io::Error> {
-  if let Some(data) = payload_to_int_repr(cmd) {
-    stream
-      .write_all(&(11 - 2 + data.len() as i32).to_be_bytes())
-      .await?; // Placeholder for length
-    stream.write_all(&id.to_be_bytes()).await?; // ID
-    stream.write_all(&0_u8.to_be_bytes()).await?; // Flags
-    stream.write_all(&data).await?;
+  let data = packet_from_debugger_to_bytes(id, packet);
+  stream.write_all(&data).await?;
 
-    Ok(())
-  } else {
-    eprintln!("Failed to encode command payload");
-    Err(std::io::Error::new(
-      std::io::ErrorKind::InvalidData,
-      "Invalid command payload",
-    ))
-  }
+  Ok(())
 }
 
 pub async fn receive_packet<R: AsyncRead + Unpin>(
   reader: &mut R,
-  payloads: &[JDWPCommandPayload],
+  payloads: &[JDWPPacketDataFromDebugger],
   context: &JDWPContext,
-) -> Option<JDWPReplyPacket> {
-  let length = reader.read_i32().await.ok()?;
-  let id = reader.read_i32().await.ok()?;
-  let flags = reader.read_u8().await.ok()?;
-  let error_code = reader.read_u16().await.ok()?;
+) -> Option<(JDWPPacketDataFromDebuggee, i32)> {
+  let length = reader.read_u32().await.ok()?;
 
-  let remain_packet: Vec<u8> = {
-    let mut buf = vec![0; (length - 11) as usize];
+  let data = {
+    let mut buf = vec![0; (length - 4) as usize];
     reader.read_exact(&mut buf).await.ok()?;
     buf
   };
 
-  if error_code != 0 {
-    eprintln!("Error code received: {}", error_code);
-    return None; // Handle error code appropriately
-  }
-
-  let data = int_repr_to_responce_to(payloads.get(id as usize)?, &remain_packet, context)?;
-
-  Some(JDWPReplyPacket {
-    length,
-    id,
-    flags,
-    error_code,
-    data,
-  })
+  parse_packet_from_debuggee(payloads, &data, context)
 }
 
 // --------------------------------------
