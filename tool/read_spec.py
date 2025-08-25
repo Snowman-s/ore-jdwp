@@ -46,7 +46,7 @@ def extract_all_command(soup: bs4.BeautifulSoup):
 
   return commands
 
-def parse_command_table(soup, command_set_name: str, command_name: str, send_from_debugger: bool = True):
+def parse_command_table(soup, command_set_name: str, command_name: str, send_from_debugger: bool = True):  
   # まず、コマンドセットに等しい h4 を探す
   h4 = None
   for h4_tag in soup.find_all("h4"):
@@ -89,8 +89,8 @@ def parse_command_table(soup, command_set_name: str, command_name: str, send_fro
 
     # それぞれの <dd> から情報を抽出
     return {
-      "Out": parse_packet_table(command_set_name, dd_tags[0]),
-      "Response": parse_packet_table(command_set_name, dd_tags[1]),
+      "Send": parse_packet_table(command_set_name, dd_tags[0]),
+      "Receive": parse_packet_table(command_set_name, dd_tags[1]),
       # Error だけパケットテーブルではない
       "Error": parse_error_info(dd_tags[2])
     }
@@ -100,7 +100,7 @@ def parse_command_table(soup, command_set_name: str, command_name: str, send_fro
 
     # それぞれの <dd> から情報を抽出
     return {
-      "Out": parse_packet_table(command_set_name, dd_tags[0]),
+      "Receive": parse_packet_table(command_set_name, dd_tags[0]),
     }
 
 
@@ -414,18 +414,24 @@ if __name__ == "__main__":
   extracted_cmd = extract_all_command(soup)
   parsed_command_table = {}
   for cmd in extracted_cmd:
-    parsed_command_table[cmd["command_name"]] = parse_command_table(soup, cmd["command_set_name"], cmd["command_name"], cmd["set_num"] < 64)
+    parsed_command_table[cmd["command_set_name"] + cmd["command_name"]] = parse_command_table(soup, cmd["command_set_name"], cmd["command_name"], cmd["set_num"] < 64)
 
   # まず、jdwp_command_map! マクロを生成する
   with open(os.path.join(os.path.dirname(__file__), "jdwp_command_map.txt"), "w", encoding="utf-8") as f:
+    f.write("// Auto generated\n")
     f.write("jdwp_command_map!(\n")
     for i, cmd in enumerate(extracted_cmd):
       is_last = (i == len(extracted_cmd) - 1)
-      payload = "NoData" if parsed_command_table[cmd["command_name"]]["Out"] is None else f"{cmd['command_set_name']}{snake_to_camel(cmd['command_name'])}Out"
-      response = "NoData" if "Response" not in parsed_command_table[cmd["command_name"]] or parsed_command_table[cmd["command_name"]]["Response"] is None else f"{cmd['command_set_name']}{snake_to_camel(cmd['command_name'])}Response"
-      f.write(f"  {cmd['command_set_name']}{snake_to_camel(cmd['command_name'])}({payload}, {response}) => {cmd['set_num'], cmd['command_num']}")
+      payload = "NoData" if "Send" not in parsed_command_table[cmd["command_set_name"] + cmd["command_name"]] or \
+                  parsed_command_table[cmd["command_set_name"] + cmd["command_name"]]["Send"] is None \
+                else f"{cmd['command_set_name']}{snake_to_camel(cmd['command_name'])}Send"
+      Receive = "NoData" if "Receive" not in parsed_command_table[cmd["command_set_name"] + cmd["command_name"]] or \
+                  parsed_command_table[cmd["command_set_name"] + cmd["command_name"]]["Receive"] is None \
+                else f"{cmd['command_set_name']}{snake_to_camel(cmd['command_name'])}Receive"
+      f.write(f"  {cmd['command_set_name']}{snake_to_camel(cmd['command_name'])}({payload}, {Receive}) => {cmd['set_num'], cmd['command_num']}")
       if not is_last:
-        f.write(",\n")
+        f.write(",")
+      f.write("\n")
     f.write(");")
 
   with open(os.path.join(os.path.dirname(__file__), "defs.rs"), "w", encoding="utf-8") as f:
@@ -438,11 +444,11 @@ if __name__ == "__main__":
       try:
         if cmd["set_num"] >= 64:
           data = parse_command_table(soup, cmd["command_set_name"], cmd["command_name"], False)
-          f.write(create_rust_structs_from_cmd_data(cmd["command_set_name"] + cmd["command_name"] + "Out", data["Out"]))
+          f.write(create_rust_structs_from_cmd_data(cmd["command_set_name"] + cmd["command_name"] + "Receive", data["Receive"]))
         else:
           data = parse_command_table(soup, cmd["command_set_name"], cmd["command_name"], True)
-          f.write(create_rust_structs_from_cmd_data(cmd["command_set_name"] + cmd["command_name"] + "Out", data["Out"]))
-          f.write(create_rust_structs_from_cmd_data(cmd["command_set_name"] + cmd["command_name"] + "Response", data["Response"]))
+          f.write(create_rust_structs_from_cmd_data(cmd["command_set_name"] + cmd["command_name"] + "Send", data["Send"]))
+          f.write(create_rust_structs_from_cmd_data(cmd["command_set_name"] + cmd["command_name"] + "Receive", data["Receive"]))
       except Exception as e:
         print(f"Error processing command {cmd}: {e}")
         raise e
