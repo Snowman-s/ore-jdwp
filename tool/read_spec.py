@@ -418,25 +418,30 @@ if __name__ == "__main__":
 
   # まず、jdwp_command_map! マクロを生成する
   with open(os.path.join(os.path.dirname(__file__), "jdwp_command_map.txt"), "w", encoding="utf-8") as f:
+    is_set_num_over_64 = False
+
     f.write("// Auto generated\n")
     f.write("jdwp_command_map!(\n")
+
     for i, cmd in enumerate(extracted_cmd):
-      is_last = (i == len(extracted_cmd) - 1)
-      payload = "NoData" if "Send" not in parsed_command_table[cmd["command_set_name"] + cmd["command_name"]] or \
+      if not is_set_num_over_64 and cmd["set_num"] >= 64:
+        # 区切りを書く
+        is_set_num_over_64 = True
+        f.write("  ;\n")
+
+      payload = "()" if "Send" not in parsed_command_table[cmd["command_set_name"] + cmd["command_name"]] or \
                   parsed_command_table[cmd["command_set_name"] + cmd["command_name"]]["Send"] is None \
                 else f"{cmd['command_set_name']}{snake_to_camel(cmd['command_name'])}Send"
-      Receive = "NoData" if "Receive" not in parsed_command_table[cmd["command_set_name"] + cmd["command_name"]] or \
+      Receive = "()" if "Receive" not in parsed_command_table[cmd["command_set_name"] + cmd["command_name"]] or \
                   parsed_command_table[cmd["command_set_name"] + cmd["command_name"]]["Receive"] is None \
                 else f"{cmd['command_set_name']}{snake_to_camel(cmd['command_name'])}Receive"
       f.write(f"  {cmd['command_set_name']}{snake_to_camel(cmd['command_name'])}({payload}, {Receive}) => {cmd['set_num'], cmd['command_num']}")
-      if not is_last:
-        f.write(",")
-      f.write("\n")
+      f.write(",\n")
     f.write(");")
 
   with open(os.path.join(os.path.dirname(__file__), "defs.rs"), "w", encoding="utf-8") as f:
     f.write("// Auto generated\n")
-    f.write("use crate::packets::*;\nuse std::io::{Read, Write};\n\n")
+    f.write("use crate::packets::*;\n\n")
 
     for cmd in extracted_cmd:
       # コマンドセット番号が64以上なら、JVM側から送信される

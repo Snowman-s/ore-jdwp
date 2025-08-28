@@ -1,7 +1,6 @@
-// Auto generated
 use crate::packets::*;
-use std::io::{Read, Write};
 
+// Auto generated
 #[derive(Debug, PartialEq, Clone)]
 pub struct VirtualMachineVersionReceive {
   /* Text information on the VM version */

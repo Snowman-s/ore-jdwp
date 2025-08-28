@@ -1,7 +1,6 @@
 use std::{
   fmt::Debug,
   io::{Read, Write},
-  path::Display,
 };
 
 use tokio::io::AsyncRead;
@@ -69,24 +68,21 @@ impl PacketData for bool {
   }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct NoData {}
-
-impl PacketData for NoData {
+impl PacketData for () {
   fn write_to<W: Write>(&self, _w: &mut W) -> Result<(), std::io::Error> {
     Ok(())
   }
 
   fn read_from<R: Read>(_r: &mut R, _c: &JDWPContext) -> Result<Self, std::io::Error> {
-    Ok(NoData {})
+    Ok(())
   }
 }
 
 // ; で区切り、前半はデバッガリクエスト -> JVM のレスポンス の流れのコマンド。
 // 後半は JVM のリクエスト -> デバッガのレスポンス の流れのコマンド
 macro_rules! jdwp_command_map {
-  ($($name:ident($payload: ty, $response:ty) => ($set:expr, $cmd:expr)),*;
-    $($name2:ident($payload2: ty, $response2:ty) => ($set2:expr, $cmd2:expr)),*) => {
+  ($($name:ident($payload: ty, $response:ty) => ($set:expr, $cmd:expr)),*,;
+    $($name2:ident($payload2: ty, $response2:ty) => ($set2:expr, $cmd2:expr)),*,) => {
 
     #[derive(Debug, PartialEq, Clone)]
     pub enum JDWPPacketDataFromDebugger {
@@ -167,28 +163,27 @@ macro_rules! jdwp_command_map {
 }
 
 // Auto generated
-// Auto generated
 jdwp_command_map!(
-  VirtualMachineVersion(NoData, VirtualMachineVersionReceive) => (1, 1),
+  VirtualMachineVersion((), VirtualMachineVersionReceive) => (1, 1),
   VirtualMachineClassesBySignature(VirtualMachineClassesBySignatureSend, VirtualMachineClassesBySignatureReceive) => (1, 2),
-  VirtualMachineAllClasses(NoData, VirtualMachineAllClassesReceive) => (1, 3),
-  VirtualMachineAllThreads(NoData, VirtualMachineAllThreadsReceive) => (1, 4),
-  VirtualMachineTopLevelThreadGroups(NoData, VirtualMachineTopLevelThreadGroupsReceive) => (1, 5),
-  VirtualMachineDispose(NoData, NoData) => (1, 6),
-  VirtualMachineIDSizes(NoData, VirtualMachineIDSizesReceive) => (1, 7),
-  VirtualMachineSuspend(NoData, NoData) => (1, 8),
-  VirtualMachineResume(NoData, NoData) => (1, 9),
-  VirtualMachineExit(VirtualMachineExitSend, NoData) => (1, 10),
+  VirtualMachineAllClasses((), VirtualMachineAllClassesReceive) => (1, 3),
+  VirtualMachineAllThreads((), VirtualMachineAllThreadsReceive) => (1, 4),
+  VirtualMachineTopLevelThreadGroups((), VirtualMachineTopLevelThreadGroupsReceive) => (1, 5),
+  VirtualMachineDispose((), ()) => (1, 6),
+  VirtualMachineIDSizes((), VirtualMachineIDSizesReceive) => (1, 7),
+  VirtualMachineSuspend((), ()) => (1, 8),
+  VirtualMachineResume((), ()) => (1, 9),
+  VirtualMachineExit(VirtualMachineExitSend, ()) => (1, 10),
   VirtualMachineCreateString(VirtualMachineCreateStringSend, VirtualMachineCreateStringReceive) => (1, 11),
-  VirtualMachineCapabilities(NoData, VirtualMachineCapabilitiesReceive) => (1, 12),
-  VirtualMachineClassPaths(NoData, VirtualMachineClassPathsReceive) => (1, 13),
-  VirtualMachineDisposeObjects(VirtualMachineDisposeObjectsSend, NoData) => (1, 14),
-  VirtualMachineHoldEvents(NoData, NoData) => (1, 15),
-  VirtualMachineReleaseEvents(NoData, NoData) => (1, 16),
-  VirtualMachineCapabilitiesNew(NoData, VirtualMachineCapabilitiesNewReceive) => (1, 17),
-  VirtualMachineRedefineClasses(VirtualMachineRedefineClassesSend, NoData) => (1, 18),
-  VirtualMachineSetDefaultStratum(VirtualMachineSetDefaultStratumSend, NoData) => (1, 19),
-  VirtualMachineAllClassesWithGeneric(NoData, VirtualMachineAllClassesWithGenericReceive) => (1, 20),
+  VirtualMachineCapabilities((), VirtualMachineCapabilitiesReceive) => (1, 12),
+  VirtualMachineClassPaths((), VirtualMachineClassPathsReceive) => (1, 13),
+  VirtualMachineDisposeObjects(VirtualMachineDisposeObjectsSend, ()) => (1, 14),
+  VirtualMachineHoldEvents((), ()) => (1, 15),
+  VirtualMachineReleaseEvents((), ()) => (1, 16),
+  VirtualMachineCapabilitiesNew((), VirtualMachineCapabilitiesNewReceive) => (1, 17),
+  VirtualMachineRedefineClasses(VirtualMachineRedefineClassesSend, ()) => (1, 18),
+  VirtualMachineSetDefaultStratum(VirtualMachineSetDefaultStratumSend, ()) => (1, 19),
+  VirtualMachineAllClassesWithGeneric((), VirtualMachineAllClassesWithGenericReceive) => (1, 20),
   VirtualMachineInstanceCounts(VirtualMachineInstanceCountsSend, VirtualMachineInstanceCountsReceive) => (1, 21),
   ReferenceTypeSignature(ReferenceTypeSignatureSend, ReferenceTypeSignatureReceive) => (2, 1),
   ReferenceTypeClassLoader(ReferenceTypeClassLoaderSend, ReferenceTypeClassLoaderReceive) => (2, 2),
@@ -209,7 +204,7 @@ jdwp_command_map!(
   ReferenceTypeClassFileVersion(ReferenceTypeClassFileVersionSend, ReferenceTypeClassFileVersionReceive) => (2, 17),
   ReferenceTypeConstantPool(ReferenceTypeConstantPoolSend, ReferenceTypeConstantPoolReceive) => (2, 18),
   ClassTypeSuperclass(ClassTypeSuperclassSend, ClassTypeSuperclassReceive) => (3, 1),
-  ClassTypeSetValues(ClassTypeSetValuesSend, NoData) => (3, 2),
+  ClassTypeSetValues(ClassTypeSetValuesSend, ()) => (3, 2),
   ClassTypeInvokeMethod(ClassTypeInvokeMethodSend, ClassTypeInvokeMethodReceive) => (3, 3),
   ClassTypeNewInstance(ClassTypeNewInstanceSend, ClassTypeNewInstanceReceive) => (3, 4),
   ArrayTypeNewInstance(ArrayTypeNewInstanceSend, ArrayTypeNewInstanceReceive) => (4, 1),
@@ -221,45 +216,45 @@ jdwp_command_map!(
   MethodVariableTableWithGeneric(MethodVariableTableWithGenericSend, MethodVariableTableWithGenericReceive) => (6, 5),
   ObjectReferenceReferenceType(ObjectReferenceReferenceTypeSend, ObjectReferenceReferenceTypeReceive) => (9, 1),
   ObjectReferenceGetValues(ObjectReferenceGetValuesSend, ObjectReferenceGetValuesReceive) => (9, 2),
-  ObjectReferenceSetValues(ObjectReferenceSetValuesSend, NoData) => (9, 3),
+  ObjectReferenceSetValues(ObjectReferenceSetValuesSend, ()) => (9, 3),
   ObjectReferenceMonitorInfo(ObjectReferenceMonitorInfoSend, ObjectReferenceMonitorInfoReceive) => (9, 5),
   ObjectReferenceInvokeMethod(ObjectReferenceInvokeMethodSend, ObjectReferenceInvokeMethodReceive) => (9, 6),
-  ObjectReferenceDisableCollection(ObjectReferenceDisableCollectionSend, NoData) => (9, 7),
-  ObjectReferenceEnableCollection(ObjectReferenceEnableCollectionSend, NoData) => (9, 8),
+  ObjectReferenceDisableCollection(ObjectReferenceDisableCollectionSend, ()) => (9, 7),
+  ObjectReferenceEnableCollection(ObjectReferenceEnableCollectionSend, ()) => (9, 8),
   ObjectReferenceIsCollected(ObjectReferenceIsCollectedSend, ObjectReferenceIsCollectedReceive) => (9, 9),
   ObjectReferenceReferringObjects(ObjectReferenceReferringObjectsSend, ObjectReferenceReferringObjectsReceive) => (9, 10),
   StringReferenceValue(StringReferenceValueSend, StringReferenceValueReceive) => (10, 1),
   ThreadReferenceName(ThreadReferenceNameSend, ThreadReferenceNameReceive) => (11, 1),
-  ThreadReferenceSuspend(ThreadReferenceSuspendSend, NoData) => (11, 2),
-  ThreadReferenceResume(ThreadReferenceResumeSend, NoData) => (11, 3),
+  ThreadReferenceSuspend(ThreadReferenceSuspendSend, ()) => (11, 2),
+  ThreadReferenceResume(ThreadReferenceResumeSend, ()) => (11, 3),
   ThreadReferenceStatus(ThreadReferenceStatusSend, ThreadReferenceStatusReceive) => (11, 4),
   ThreadReferenceThreadGroup(ThreadReferenceThreadGroupSend, ThreadReferenceThreadGroupReceive) => (11, 5),
   ThreadReferenceFrames(ThreadReferenceFramesSend, ThreadReferenceFramesReceive) => (11, 6),
   ThreadReferenceFrameCount(ThreadReferenceFrameCountSend, ThreadReferenceFrameCountReceive) => (11, 7),
   ThreadReferenceOwnedMonitors(ThreadReferenceOwnedMonitorsSend, ThreadReferenceOwnedMonitorsReceive) => (11, 8),
   ThreadReferenceCurrentContendedMonitor(ThreadReferenceCurrentContendedMonitorSend, ThreadReferenceCurrentContendedMonitorReceive) => (11, 9),
-  ThreadReferenceStop(ThreadReferenceStopSend, NoData) => (11, 10),
-  ThreadReferenceInterrupt(ThreadReferenceInterruptSend, NoData) => (11, 11),
+  ThreadReferenceStop(ThreadReferenceStopSend, ()) => (11, 10),
+  ThreadReferenceInterrupt(ThreadReferenceInterruptSend, ()) => (11, 11),
   ThreadReferenceSuspendCount(ThreadReferenceSuspendCountSend, ThreadReferenceSuspendCountReceive) => (11, 12),
   ThreadReferenceOwnedMonitorsStackDepthInfo(ThreadReferenceOwnedMonitorsStackDepthInfoSend, ThreadReferenceOwnedMonitorsStackDepthInfoReceive) => (11, 13),
-  ThreadReferenceForceEarlyReturn(ThreadReferenceForceEarlyReturnSend, NoData) => (11, 14),
+  ThreadReferenceForceEarlyReturn(ThreadReferenceForceEarlyReturnSend, ()) => (11, 14),
   ThreadGroupReferenceName(ThreadGroupReferenceNameSend, ThreadGroupReferenceNameReceive) => (12, 1),
   ThreadGroupReferenceParent(ThreadGroupReferenceParentSend, ThreadGroupReferenceParentReceive) => (12, 2),
   ThreadGroupReferenceChildren(ThreadGroupReferenceChildrenSend, ThreadGroupReferenceChildrenReceive) => (12, 3),
   ArrayReferenceLength(ArrayReferenceLengthSend, ArrayReferenceLengthReceive) => (13, 1),
   ArrayReferenceGetValues(ArrayReferenceGetValuesSend, ArrayReferenceGetValuesReceive) => (13, 2),
-  ArrayReferenceSetValues(ArrayReferenceSetValuesSend, NoData) => (13, 3),
+  ArrayReferenceSetValues(ArrayReferenceSetValuesSend, ()) => (13, 3),
   ClassLoaderReferenceVisibleClasses(ClassLoaderReferenceVisibleClassesSend, ClassLoaderReferenceVisibleClassesReceive) => (14, 1),
   EventRequestSet(EventRequestSetSend, EventRequestSetReceive) => (15, 1),
-  EventRequestClear(EventRequestClearSend, NoData) => (15, 2),
-  EventRequestClearAllBreakpoints(NoData, NoData) => (15, 3),
+  EventRequestClear(EventRequestClearSend, ()) => (15, 2),
+  EventRequestClearAllBreakpoints((), ()) => (15, 3),
   StackFrameGetValues(StackFrameGetValuesSend, StackFrameGetValuesReceive) => (16, 1),
-  StackFrameSetValues(StackFrameSetValuesSend, NoData) => (16, 2),
+  StackFrameSetValues(StackFrameSetValuesSend, ()) => (16, 2),
   StackFrameThisObject(StackFrameThisObjectSend, StackFrameThisObjectReceive) => (16, 3),
-  StackFramePopFrames(StackFramePopFramesSend, NoData) => (16, 4),
-  ClassObjectReferenceReflectedType(ClassObjectReferenceReflectedTypeSend, ClassObjectReferenceReflectedTypeReceive) => (17, 1)
+  StackFramePopFrames(StackFramePopFramesSend, ()) => (16, 4),
+  ClassObjectReferenceReflectedType(ClassObjectReferenceReflectedTypeSend, ClassObjectReferenceReflectedTypeReceive) => (17, 1),
   ;
-  EventComposite(NoData, EventCompositeReceive) => (64, 100)
+  EventComposite((), EventCompositeReceive) => (64, 100),
 );
 
 pub async fn send_packet<W: AsyncWrite + Unpin>(
@@ -588,7 +583,7 @@ pub enum JDWPTagConstants {
 
 impl PacketData for JDWPTagConstants {
   fn write_to<W: Write>(&self, w: &mut W) -> Result<(), std::io::Error> {
-    w.write_all(&[self.clone() as u8])
+    w.write_all(&[*self as u8])
   }
   fn read_from<R: Read>(r: &mut R, _c: &JDWPContext) -> Result<Self, std::io::Error> {
     let mut data = [0u8; 1];

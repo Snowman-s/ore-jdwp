@@ -1,21 +1,14 @@
-use std::clone;
 use std::sync::Arc;
 
+use clap::Parser;
+use futures_util::lock::Mutex;
 use tokio::io::AsyncReadExt;
 use tokio::io::AsyncWriteExt;
 use tokio::net::TcpStream;
 
-use crate::defs::VirtualMachineClassesBySignatureSend;
-use crate::packets::JDWPPacketDataFromDebuggee;
-use crate::packets::JDWPPacketDataFromDebugger;
-use crate::packets::NoData;
-use crate::packets::packet_from_debugger_to_bytes;
-use crate::packets::send_packet;
-use clap::Parser;
-use futures_util::lock::Mutex;
-
-mod defs;
-mod packets;
+use ore_jdwp::defs::VirtualMachineClassesBySignatureSend;
+use ore_jdwp::packets::{JDWPContext, JDWPPacketDataFromDebuggee, JDWPPacketDataFromDebugger};
+use ore_jdwp::packets::{receive_packet, send_packet};
 
 #[derive(Parser, Debug)]
 #[command(name = "tcp_client")]
@@ -37,9 +30,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   let mut stream = TcpStream::connect(addr.clone()).await?;
   println!("Connected to {}", addr);
 
-  let payloads: Arc<Mutex<Vec<packets::JDWPPacketDataFromDebugger>>> =
-    Arc::new(Mutex::new(Vec::new()));
-  let context = Arc::new(Mutex::new(packets::JDWPContext {
+  let payloads: Arc<Mutex<Vec<JDWPPacketDataFromDebugger>>> = Arc::new(Mutex::new(Vec::new()));
+  let context = Arc::new(Mutex::new(JDWPContext {
     field_id_size: Option::None,
     method_id_size: Option::None,
     object_id_size: Option::None,
@@ -63,21 +55,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   println!("Handshake successful!");
 
   print!("Get id sizes..");
-  let payload = packets::JDWPPacketDataFromDebugger::VirtualMachineIDSizes(NoData {});
+  let payload = JDWPPacketDataFromDebugger::VirtualMachineIDSizes(());
   payloads.lock().await.push(payload.clone());
-  stream
-    .write_all(&packet_from_debugger_to_bytes(0, &payload))
-    .await?;
+  send_packet(&mut stream, 0, &payload).await?;
   let mut buf = [0u8; 1024];
   let amount = stream.read(&mut buf[..]).await?;
   assert!(amount < 1024);
-  let Some((JDWPPacketDataFromDebuggee::VirtualMachineIDSizes(packet), _)) =
-    packets::receive_packet(
-      &mut &buf[..amount],
-      &payloads.lock().await,
-      &*context.lock().await,
-    )
-    .await
+  let Some((JDWPPacketDataFromDebuggee::VirtualMachineIDSizes(packet), _)) = receive_packet(
+    &mut &buf[..amount],
+    &payloads.lock().await,
+    &*context.lock().await,
+  )
+  .await
   else {
     panic!("Failed to decode packet")
   };
@@ -112,7 +101,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Ok(n) => {
           // Await the async receive_packet function
-          let packet_and_id = packets::receive_packet(
+          let packet_and_id = receive_packet(
             &mut &buf[..n],
             &payloads_recv.lock().await,
             &*context_recv.lock().await,
@@ -185,10 +174,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
       match input_split.first().copied() {
         Some("version") => {
           // バージョン情報を得たい
-          let payload = packets::JDWPPacketDataFromDebugger::VirtualMachineVersion(NoData {});
+          let payload = JDWPPacketDataFromDebugger::VirtualMachineVersion(());
           payloads_send.lock().await.push(payload.clone());
 
-          packets::send_packet(&mut writer, *debugger_id, &payload.clone())
+          send_packet(&mut writer, *debugger_id, &payload.clone())
             .await
             .unwrap();
 
@@ -207,13 +196,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             continue;
           }
           // クラス情報を得たい
-          let payload = packets::JDWPPacketDataFromDebugger::VirtualMachineClassesBySignature(
+          let payload = JDWPPacketDataFromDebugger::VirtualMachineClassesBySignature(
             VirtualMachineClassesBySignatureSend {
               signature: input_split[1].into(),
             },
           );
           payloads_send.lock().await.push(payload.clone());
-          packets::send_packet(&mut writer, *debugger_id, &payload.clone())
+          send_packet(&mut writer, *debugger_id, &payload.clone())
             .await
             .unwrap();
           *debugger_id += 1;
