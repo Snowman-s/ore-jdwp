@@ -1,6 +1,7 @@
 use std::{
   fmt::Debug,
   io::{Read, Write},
+  path::Display,
 };
 
 use tokio::io::AsyncRead;
@@ -291,7 +292,7 @@ pub async fn receive_packet<R: AsyncRead + Unpin>(
 // --------------------------------------
 // "common data types" for JDWP
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+#[derive(PartialEq, Eq, Hash, Clone)]
 pub struct JDWPString {
   pub length: i32,
   pub data: String,
@@ -304,6 +305,12 @@ impl From<&str> for JDWPString {
       length: bytes.len() as i32,
       data: val.to_owned(),
     }
+  }
+}
+
+impl Debug for JDWPString {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    write!(f, "{}", self.data)
   }
 }
 

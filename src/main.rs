@@ -1,3 +1,4 @@
+use std::clone;
 use std::sync::Arc;
 
 use tokio::io::AsyncReadExt;
@@ -86,6 +87,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   // --- ここから非同期で送受信を分離 ---
   let (mut reader, mut writer) = stream.into_split();
 
+  // こっちは標準出力
+  let writer_and_debugger_id = Arc::new(Mutex::new((tokio::io::stdout(), 1i32)));
+  let clone_writer_and_debugger_id = Arc::clone(&writer_and_debugger_id);
+
   // Clone Arcs for each task
   let payloads_recv = Arc::clone(&payloads);
   let context_recv = Arc::clone(&context);
@@ -97,7 +102,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     loop {
       match reader.read(&mut buf).await {
         Ok(0) => {
-          println!("Connection closed by peer");
+          let mut guard = writer_and_debugger_id.lock().await;
+          let (write_guard, _) = &mut *guard;
+          write_guard
+            .write_all(b"Connection closed by peer")
+            .await
+            .unwrap();
           break;
         }
         Ok(n) => {
@@ -109,17 +119,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
           )
           .await;
 
-          match packet_and_id {
-            Some((packet, id)) => {
-              println!("{}> Received packet: {:?}", id, packet);
-            }
-            None => {
-              eprintln!("Failed to decode packet: {:?}", &buf[..n]);
-            }
-          }
+          let mut guard = writer_and_debugger_id.lock().await;
+          let (write_guard, debugger_id) = &mut *guard;
+          let msg = match packet_and_id {
+            Some((packet, id)) => format!("{}> Received packet: {:?}\n", id, packet),
+            None => format!("?> Failed to decode packet: {:?}\n", &buf[..n]),
+          };
+
+          // 先に、先頭に戻る
+          write_guard.write_all(b"\r").await.unwrap();
+          write_guard.write_all(msg.as_bytes()).await.unwrap();
+          // メッセージ後、プロンプトを再表示
+          write_guard
+            .write_all(format!("\n{}> ", debugger_id).as_bytes())
+            .await
+            .unwrap();
+          write_guard.flush().await.unwrap();
         }
         Err(e) => {
-          eprintln!("Read error: {:?}", e);
+          let mut guard = writer_and_debugger_id.lock().await;
+          let (write_guard, _) = &mut *guard;
+          write_guard
+            .write_all(format!("Read error: {:?}\n", e).as_bytes())
+            .await
+            .unwrap();
           break;
         }
       }
@@ -128,38 +151,59 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
   // 送信タスク
   let send_task = tokio::spawn(async move {
-    let mut id = 1;
     loop {
       use tokio::io::AsyncBufReadExt;
       let mut input = String::new();
       let mut stdin = tokio::io::BufReader::new(tokio::io::stdin());
-      let mut stdout = tokio::io::stdout();
-      stdout
-        .write_all(format!("{}> ", id).as_bytes())
-        .await
-        .unwrap();
-      stdout.flush().await.unwrap();
+      {
+        let mut guard = clone_writer_and_debugger_id.lock().await;
+        let (writer_guard, debugger_id) = &mut *guard;
+
+        writer_guard
+          .write_all(format!("{}> ", debugger_id).as_bytes())
+          .await
+          .unwrap();
+        writer_guard.flush().await.unwrap();
+      }
       stdin.read_line(&mut input).await.unwrap();
       if input.trim() == "exit" {
-        println!("Exiting send task.");
+        let mut guard = clone_writer_and_debugger_id.lock().await;
+        let (writer_guard, _) = &mut *guard;
+        writer_guard
+          .write_all("Exiting send task.".as_bytes())
+          .await
+          .unwrap();
+        writer_guard.flush().await.unwrap();
         break;
       }
 
       let input_split = input.trim().split(' ').collect::<Vec<&str>>();
+
+      let mut guard = clone_writer_and_debugger_id.lock().await;
+      let (writer_guard, debugger_id) = &mut *guard;
 
       match input_split.first().copied() {
         Some("version") => {
           // バージョン情報を得たい
           let payload = packets::JDWPPacketDataFromDebugger::VirtualMachineVersion(NoData {});
           payloads_send.lock().await.push(payload.clone());
-          packets::send_packet(&mut writer, id, &payload.clone())
+
+          packets::send_packet(&mut writer, *debugger_id, &payload.clone())
             .await
             .unwrap();
-          id += 1;
+
+          *debugger_id += 1;
         }
         Some("classes-by-signature") => {
           if input_split.len() < 2 {
-            println!("Usage: classes-by-signature <class_signature>");
+            writer_guard
+              .write_all(
+                "Usage: classes-by-signature <class_signature>"
+                  .to_string()
+                  .as_bytes(),
+              )
+              .await
+              .unwrap();
             continue;
           }
           // クラス情報を得たい
@@ -169,14 +213,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             },
           );
           payloads_send.lock().await.push(payload.clone());
-          packets::send_packet(&mut writer, id, &payload.clone())
+          packets::send_packet(&mut writer, *debugger_id, &payload.clone())
             .await
             .unwrap();
-          id += 1;
+          *debugger_id += 1;
         }
-        _ => {
-          println!("Unknown command: {}", input.trim());
+        Some(cmd) => {
+          writer_guard
+            .write_all(format!("Unknown command: {}\n", cmd).as_bytes())
+            .await
+            .unwrap();
         }
+        None => {}
       }
     }
   });
