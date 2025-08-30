@@ -278,13 +278,7 @@ def create_rust_structs_from_cmd_data(cmd_name: str, table_data: Array[dict]) ->
   ret += f"impl PacketData for {snake_to_camel(cmd_name)} {{\n"
   ret += "  fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {\n"
   for field in table_data:
-    if field["type"] == "case":
-      ret += f"    match &self.{camel_to_snake(field['name'])} {{\n"
-      for key in field["case"].keys():
-        ret += f"      {snake_to_camel(cmd_name)}{snake_to_camel(field['name'])}::_{snake_to_camel(key)}(inner) => inner.write_to(writer)?,\n"
-      ret += f"    }}\n"
-    else:
-      ret += f"    self.{camel_to_snake(field['name'])}.write_{'' if 'untagged' not in field['type'] else 'untagged_'}to(writer)?;\n"
+    ret += f"    self.{camel_to_snake(field['name'])}.write_{'' if 'untagged' not in field['type'] else 'untagged_'}to(writer)?;\n"
   ret += "    Ok(())\n"
   ret += "  }\n\n"
   ret += "  fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {\n"
@@ -326,7 +320,10 @@ def create_case_enum(cmd_name: str, field: dict) -> str:
   ret += "  fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {\n"
   ret += f"    match self {{\n"
   for key in field["case"].keys():
-    ret += f"      {snake_to_camel(cmd_name)}{snake_to_camel(field['name'])}::_{snake_to_camel(key)}(inner) => inner.write_to(writer)?,\n"
+    ret += f"      {snake_to_camel(cmd_name)}{snake_to_camel(field['name'])}::_{snake_to_camel(key)}(inner) => {{\n"
+    ret += f"        {matching_of_case(key, field)}.write_to(writer)?;\n"
+    ret += f"        inner.write_to(writer)?;\n"
+    ret += f"      }}\n"
   ret += f"    }}\n"
   ret += "    Ok(())\n"
   ret += "  }\n\n"
@@ -381,7 +378,7 @@ def matching_of_case(case_key: str, case_field: dict) -> str:
   if case_field['name'] == 'EventKind':
     return f"JDWPEventKindConstants::{snake_to_camel(case_key)}"
 
-  return snake_to_camel(case_key)
+  return snake_to_camel(case_key) + "_u8"
 
 def type_to_rust_str(cmd_name: str, field: dict) -> str:
   type_name = field["type"]
