@@ -168,14 +168,9 @@ def parse_packet_table(cmd_set:str, soup: bs4.BeautifulSoup):
             child += row
             row_index += 1
           return [{
-            "type": "int",
-            "name": cap_first(name_text),
-            "description": desc_text
-          }, {
             "type": "repeated",
-            "name": cap_first(name_text) + "Repeated",
-            "by": name_text,
-            "description": next_cells[repeat_info_index].text.strip(),
+            "name": cap_first(name_text),
+            "description": desc_text,
             "repeat": child
           }] 
       
@@ -283,11 +278,7 @@ def create_rust_structs_from_cmd_data(cmd_name: str, table_data: Array[dict]) ->
   ret += f"impl PacketData for {snake_to_camel(cmd_name)} {{\n"
   ret += "  fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {\n"
   for field in table_data:
-    if field["type"] == "repeated":
-      ret += f"    for item in &self.{camel_to_snake(field['name'])} {{\n"
-      ret += f"      item.write_to(writer)?;\n"
-      ret += f"    }}\n"
-    elif field["type"] == "case":
+    if field["type"] == "case":
       ret += f"    match &self.{camel_to_snake(field['name'])} {{\n"
       for key in field["case"].keys():
         ret += f"      {snake_to_camel(cmd_name)}{snake_to_camel(field['name'])}::_{snake_to_camel(key)}(inner) => inner.write_to(writer)?,\n"
@@ -299,16 +290,7 @@ def create_rust_structs_from_cmd_data(cmd_name: str, table_data: Array[dict]) ->
   ret += "  fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {\n"
   for field in table_data:
     if field["type"] == "repeated":
-      ret += f"    let mut {camel_to_snake(field['name'])} = Vec::new();\n"
-      ret += f"    for _ in 0..{camel_to_snake(field['by'])} {{ \n"
-      ret += f"      {camel_to_snake(field['name'])}.push({snake_to_camel(cmd_name)}{snake_to_camel(field['name'])}::read_from(reader, c)?);\n"
-      ret += f"    }}\n"
-    elif field["type"] == "case":
-      ret += f"     let {camel_to_snake(field['name'])} = match {'u8' if field['name'] != 'EventKind' else 'JDWPEventKindConstants'}::read_from(reader, c)? {{\n"
-      for key in field["case"].keys():
-        ret += f"      {matching_of_case(key, field)} => {snake_to_camel(cmd_name)}{snake_to_camel(field['name'])}::_{snake_to_camel(key)}({snake_to_camel(cmd_name)}{snake_to_camel(field['name'])}{snake_to_camel(key)}::read_from(reader, c)?),\n"
-      ret += "    _ => panic!(),\n"
-      ret += f"    }};\n"
+      ret += f"    let {camel_to_snake(field['name'])} = <(i32, Vec<{snake_to_camel(cmd_name)}{snake_to_camel(field['name'])}>)>::read_from(reader, c)?;\n"
     else:
       # read_untagged_from は array_region でしか発生しえない。
       # untagged-value が含まれる場合に read_from を呼び出すとエラーになるが、
@@ -321,6 +303,12 @@ def create_rust_structs_from_cmd_data(cmd_name: str, table_data: Array[dict]) ->
   ret += "  }\n"
   ret += "}\n"
 
+  ret += f"impl_conv_pretty_io_value_struct!(\n"
+  ret += f"  {snake_to_camel(cmd_name)},\n"
+  for field in table_data:
+    ret += f"  {camel_to_snake(field['name'])}: {type_to_rust_str(cmd_name, field)},\n"
+  ret += f");\n"
+
   return ret
 
 def create_case_enum(cmd_name: str, field: dict) -> str:
@@ -332,7 +320,58 @@ def create_case_enum(cmd_name: str, field: dict) -> str:
   ret += f"pub enum {snake_to_camel(cmd_name)}{snake_to_camel(field['name'])} {{\n"
   for key in field["case"].keys():
     ret += f"  _{snake_to_camel(key)}({cmd_name}{snake_to_camel(field['name'])}{snake_to_camel(key)}),\n"
-  ret += "}\n\n"
+  ret += "}\n"
+
+  ret += f"impl PacketData for {snake_to_camel(cmd_name)}{snake_to_camel(field['name'])} {{\n"
+  ret += "  fn write_to<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {\n"
+  ret += f"    match self {{\n"
+  for key in field["case"].keys():
+    ret += f"      {snake_to_camel(cmd_name)}{snake_to_camel(field['name'])}::_{snake_to_camel(key)}(inner) => inner.write_to(writer)?,\n"
+  ret += f"    }}\n"
+  ret += "    Ok(())\n"
+  ret += "  }\n\n"
+  ret += "  fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {\n"
+  ret += f"    let case = {'u8' if field['name'] != 'EventKind' else 'JDWPEventKindConstants'}::read_from(reader, c)?;\n"
+  ret += f"    let data = match case {{\n"
+  for key in field["case"].keys():
+    ret += f"      {matching_of_case(key, field)} => {{\n"
+    ret += f"        let inner = {cmd_name}{snake_to_camel(field['name'])}{snake_to_camel(key)}::read_from(reader, c)?;\n"
+    ret += f"        {cmd_name}{snake_to_camel(field['name'])}::_{snake_to_camel(key)}(inner)\n"
+    ret += f"      }},\n"
+  ret += f"      _ => return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, \"Invalid case\")),\n"
+  ret += f"    }};\n"
+  ret += f"    Ok(data)\n"
+  ret += "  }\n"
+  ret += "}\n"
+
+  ret += "impl ConvPrettyIOValue for " + f"{snake_to_camel(cmd_name)}{snake_to_camel(field['name'])}" + " {\n"
+  ret += "  fn from_value(input: &Vec<PrettyIOKind>) -> Option<(Self, Vec<PrettyIOKind>)> {\n"
+  ret += f"    let (case, remaining) = {'u8' if field['name'] != 'EventKind' else 'JDWPEventKindConstants'}::from_value(input)?;\n"
+  ret += "    let data = match case {\n"
+  for key in field["case"].keys():
+    ret += f"      {matching_of_case(key, field)} => {{\n"
+    ret += f"        let (inner, remaining) = {cmd_name}{snake_to_camel(field['name'])}{snake_to_camel(key)}::from_value(&remaining)?;\n"
+    ret += f"        ({cmd_name}{snake_to_camel(field['name'])}::_{snake_to_camel(key)}(inner), remaining)\n"
+    ret += f"      }},\n"
+  ret += f"      _ => return None,\n"
+  ret += f"    }};\n"
+  ret += f"    Some(data)\n "
+  ret += "  }\n"
+  ret += "  fn to_value(&self) -> Vec<PrettyIOKind> {\n"
+  ret += "    let mut output = Vec::new();\n"
+  ret += f"    match self {{\n"
+  for key in field["case"].keys():
+    ret += f"      {cmd_name}{snake_to_camel(field['name'])}::_{snake_to_camel(key)}(inner) => {{\n"
+    ret += f"        output.extend({matching_of_case(key, field)}.to_value());\n"
+    ret += f"        output.extend(inner.to_value());\n"
+    ret += f"      }}\n"
+  ret += f"    }}\n"
+  ret += "    output\n"
+  ret += "  }\n"
+  ret += "  fn from_value_require_types() -> Vec<PrettyIOKindTypes> {\n"
+  ret += "    vec![PrettyIOKindTypes::Int, PrettyIOKindTypes::Variable]\n"
+  ret += "  }\n"
+  ret += "}\n"
 
   return ret
 
@@ -377,7 +416,7 @@ def type_to_rust_str(cmd_name: str, field: dict) -> str:
     return type_mapping[type_name]
   
   if type_name == "repeated":
-    return f"Vec<{cmd_name}{snake_to_camel(field['name'])}>"
+    return f"(i32, Vec<{cmd_name}{snake_to_camel(field['name'])}>)"
   if type_name == "case":
     return f"{cmd_name}{snake_to_camel(field['name'])}"
 
@@ -405,6 +444,35 @@ def camel_to_snake(camel_str: str) -> str:
       prev_lower = True
   return snake_str
 
+def name_command_shortly(cmds: list[dict]) -> list[dict]:
+  new_cmds = []
+  # 単純にコマンドの単語(CamelCase)の頭文字を取る
+  for cmd in cmds:
+    # コマンド名の頭文字を取得 (CamelCase)
+    set_short_name = ''.join([c[0] for c in re.findall(r'[A-Z][a-z]*', cmd['command_set_name'])])
+    cmd_short_name = ''.join([c[0] for c in re.findall(r'[A-Z][a-z]*', cmd['command_name'])])
+    short_name = f"{set_short_name}{cmd_short_name}".lower()
+    new_cmds.append({
+      "original": short_name,
+      "full": f"short_name_{cmd['set_num']}{cmd['command_num']}"
+    })
+
+  # 同じ original がある場合、それらの後に連番を振る
+  original_map = {}
+  for cmd in new_cmds:
+    original = cmd["original"]
+    if original in original_map:
+      original_map[original].append(cmd)
+    else:
+      original_map[original] = [cmd]
+
+  for original, cmds in original_map.items():
+    if len(cmds) > 1:
+      for i, cmd in enumerate(cmds):
+        cmd["original"] = f"{original}{i + 1}"
+
+  return new_cmds
+
 if __name__ == "__main__":
   import os
   spec_path = os.path.join(os.path.dirname(__file__), "jdwp-protocol.html")
@@ -415,6 +483,8 @@ if __name__ == "__main__":
   parsed_command_table = {}
   for cmd in extracted_cmd:
     parsed_command_table[cmd["command_set_name"] + cmd["command_name"]] = parse_command_table(soup, cmd["command_set_name"], cmd["command_name"], cmd["set_num"] < 64)
+
+  short_names = name_command_shortly(extracted_cmd)
 
   # まず、jdwp_command_map! マクロを生成する
   with open(os.path.join(os.path.dirname(__file__), "jdwp_command_map.txt"), "w", encoding="utf-8") as f:
@@ -435,7 +505,7 @@ if __name__ == "__main__":
       Receive = "()" if "Receive" not in parsed_command_table[cmd["command_set_name"] + cmd["command_name"]] or \
                   parsed_command_table[cmd["command_set_name"] + cmd["command_name"]]["Receive"] is None \
                 else f"{cmd['command_set_name']}{snake_to_camel(cmd['command_name'])}Receive"
-      f.write(f"  {cmd['command_set_name']}{snake_to_camel(cmd['command_name'])}({payload}, {Receive}) => {cmd['set_num'], cmd['command_num']}")
+      f.write(f"  {cmd['command_set_name']}{snake_to_camel(cmd['command_name'])}(\"{short_names[i]['original']}\", {payload}, {Receive}) => {cmd['set_num'], cmd['command_num']}")
       f.write(",\n")
     f.write(");")
 
