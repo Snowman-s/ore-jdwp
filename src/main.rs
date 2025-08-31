@@ -1,12 +1,15 @@
+use std::io::Read;
 use std::sync::Arc;
 
 use clap::Parser;
 use futures_util::lock::Mutex;
+use ore_jdwp::packets::create_payload_for;
+use ore_jdwp::packets::input_to_pretty_io_kind;
+use ore_jdwp::packets::packet_from_debugger_to_bytes;
 use tokio::io::AsyncReadExt;
 use tokio::io::AsyncWriteExt;
 use tokio::net::TcpStream;
 
-use ore_jdwp::defs::VirtualMachineClassesBySignatureSend;
 use ore_jdwp::packets::{JDWPContext, JDWPPacketDataFromDebuggee, JDWPPacketDataFromDebugger};
 use ore_jdwp::packets::{receive_packet, send_packet};
 
@@ -62,7 +65,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   let amount = stream.read(&mut buf[..]).await?;
   assert!(amount < 1024);
   let Some((JDWPPacketDataFromDebuggee::VirtualMachineIDSizes(packet), _)) = receive_packet(
-    &mut &buf[..amount],
+    amount as usize - 4,
+    &mut &buf[4..amount],
     &payloads.lock().await,
     &*context.lock().await,
   )
@@ -87,21 +91,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
   // 受信タスク
   let recv_task = tokio::spawn(async move {
-    let mut buf = [0u8; 1024];
     loop {
+      // 最初に length を得る
+      let length = reader.read_u32().await.unwrap();
+      let mut buf = vec![0u8; length as usize - 4];
+
       match reader.read(&mut buf).await {
-        Ok(0) => {
-          let mut guard = writer_and_debugger_id.lock().await;
-          let (write_guard, _) = &mut *guard;
-          write_guard
-            .write_all(b"Connection closed by peer")
-            .await
-            .unwrap();
-          break;
-        }
         Ok(n) => {
           // Await the async receive_packet function
           let packet_and_id = receive_packet(
+            length as usize - 4,
             &mut &buf[..n],
             &payloads_recv.lock().await,
             &*context_recv.lock().await,
@@ -111,7 +110,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
           let mut guard = writer_and_debugger_id.lock().await;
           let (write_guard, debugger_id) = &mut *guard;
           let msg = match packet_and_id {
-            Some((packet, id)) => format!("{}> Received packet: {:?}\n", id, packet),
+            Some((packet, id)) => {
+              let mut str = String::new();
+              for i in packet.to_value() {
+                str.push_str(&i.to_string());
+                str.push(' ');
+              }
+              format!("{}> Received packet: {}\n", id, str.trim_end())
+            }
             None => format!("?> Failed to decode packet: {:?}\n", &buf[..n]),
           };
 
@@ -166,55 +172,44 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         break;
       }
 
-      let input_split = input.trim().split(' ').collect::<Vec<&str>>();
-
       let mut guard = clone_writer_and_debugger_id.lock().await;
       let (writer_guard, debugger_id) = &mut *guard;
 
-      match input_split.first().copied() {
-        Some("version") => {
-          // バージョン情報を得たい
-          let payload = JDWPPacketDataFromDebugger::VirtualMachineVersion(());
-          payloads_send.lock().await.push(payload.clone());
+      let Some((cmd, arg)) = input_to_pretty_io_kind(&input) else {
+        writer_guard
+          .write_all("Failed to parse input.\n".as_bytes())
+          .await
+          .unwrap();
+        continue;
+      };
+      let payload = match create_payload_for(cmd, arg) {
+        Ok(p) => p,
+        Err(e) => {
+          writer_guard.write_all(e.as_bytes()).await.unwrap();
+          writer_guard.write_all(b"\n").await.unwrap();
+          continue;
+        }
+      };
 
-          send_packet(&mut writer, *debugger_id, &payload.clone())
-            .await
-            .unwrap();
-
-          *debugger_id += 1;
-        }
-        Some("classes-by-signature") => {
-          if input_split.len() < 2 {
-            writer_guard
-              .write_all(
-                "Usage: classes-by-signature <class_signature>"
-                  .to_string()
-                  .as_bytes(),
-              )
-              .await
-              .unwrap();
-            continue;
-          }
-          // クラス情報を得たい
-          let payload = JDWPPacketDataFromDebugger::VirtualMachineClassesBySignature(
-            VirtualMachineClassesBySignatureSend {
-              signature: input_split[1].into(),
-            },
-          );
-          payloads_send.lock().await.push(payload.clone());
-          send_packet(&mut writer, *debugger_id, &payload.clone())
-            .await
-            .unwrap();
-          *debugger_id += 1;
-        }
-        Some(cmd) => {
-          writer_guard
-            .write_all(format!("Unknown command: {}\n", cmd).as_bytes())
-            .await
-            .unwrap();
-        }
-        None => {}
+      let bytes = packet_from_debugger_to_bytes(*debugger_id, &payload);
+      let mut hex_string = String::with_capacity(bytes.len() * 3);
+      for b in &bytes {
+        use std::fmt::Write;
+        write!(&mut hex_string, "{:02X} ", b).unwrap();
       }
+
+      writer_guard
+        .write_all(format!("Sending packet: {:?}\n{}\n", payload, hex_string).as_bytes())
+        .await
+        .unwrap();
+
+      payloads_send.lock().await.push(payload.clone());
+
+      send_packet(&mut writer, *debugger_id, &payload.clone())
+        .await
+        .unwrap();
+
+      *debugger_id += 1;
     }
   });
 

@@ -1,3 +1,6 @@
+#[macro_use]
+pub mod conv_input;
+
 use std::{
   fmt::Debug,
   io::{Read, Write},
@@ -9,6 +12,7 @@ use tokio::io::AsyncWrite;
 use tokio::io::AsyncWriteExt;
 
 pub use crate::defs::*;
+pub use crate::packets::conv_input::*;
 
 #[derive(Debug, Clone)]
 pub struct JDWPContext {
@@ -37,21 +41,21 @@ pub trait PacketData: Debug + Clone + PartialEq {
 }
 
 macro_rules! impl_packet_data_for_primitive {
-    ($($t:ty),*) => {
-        $(
-            impl PacketData for $t {
-                fn write_to<W: Write>(&self, w: &mut W) -> Result<(), std::io::Error> {
-                    w.write_all(&self.to_be_bytes())
-                }
+  ($($t:ty),*) => {
+    $(
+      impl PacketData for $t {
+        fn write_to<W: Write>(&self, w: &mut W) -> Result<(), std::io::Error> {
+          w.write_all(&self.to_be_bytes())
+        }
 
-                fn read_from<R: Read>(r: &mut R, _c: &JDWPContext) -> Result<Self, std::io::Error> {
-                    let mut buf = [0u8; std::mem::size_of::<$t>()];
-                    r.read_exact(&mut buf)?;
-                    Ok(<$t>::from_be_bytes(buf))
-                }
-            }
-        )*
-    };
+        fn read_from<R: Read>(r: &mut R, _c: &JDWPContext) -> Result<Self, std::io::Error> {
+          let mut buf = [0u8; std::mem::size_of::<$t>()];
+          r.read_exact(&mut buf)?;
+          Ok(<$t>::from_be_bytes(buf))
+        }
+      }
+    )*
+  };
 }
 
 impl_packet_data_for_primitive!(i8, i16, i32, i64, u8, u16, u32, u64, f32, f64);
@@ -81,8 +85,8 @@ impl PacketData for () {
 // ; で区切り、前半はデバッガリクエスト -> JVM のレスポンス の流れのコマンド。
 // 後半は JVM のリクエスト -> デバッガのレスポンス の流れのコマンド
 macro_rules! jdwp_command_map {
-  ($($name:ident($payload: ty, $response:ty) => ($set:expr, $cmd:expr)),*,;
-    $($name2:ident($payload2: ty, $response2:ty) => ($set2:expr, $cmd2:expr)),*,) => {
+  ($($name:ident($s: expr, $payload: ty, $response:ty) => ($set:expr, $cmd:expr)),*,;
+    $($name2:ident($s2: expr, $payload2: ty, $response2:ty) => ($set2:expr, $cmd2:expr)),*,) => {
 
     #[derive(Debug, PartialEq, Clone)]
     pub enum JDWPPacketDataFromDebugger {
@@ -94,6 +98,31 @@ macro_rules! jdwp_command_map {
     pub enum JDWPPacketDataFromDebuggee {
       $($name($response)),*,
       $($name2($response2)),*
+    }
+
+    pub fn create_payload_for(cmd: String, arg: Vec<PrettyIOKind>) -> Result<JDWPPacketDataFromDebugger, String> {
+      match cmd {
+        $(
+          s if s == *$s => {
+            <$payload>::from_value(&arg).map(|(t, _)| JDWPPacketDataFromDebugger::$name(t))
+              .ok_or(format!("Failed to parse arguments for command {}\nRequired: {:?}", s, <$payload>::from_value_require_types()))
+          }
+        )*
+        _ => Err(format!("Unknown command {}", cmd))
+      }
+    }
+
+    impl JDWPPacketDataFromDebuggee {
+      pub fn to_value(&self) -> Vec<PrettyIOKind> {
+        match self {
+          $(
+            JDWPPacketDataFromDebuggee::$name(data) => data.to_value(),
+          )*
+          $(
+            JDWPPacketDataFromDebuggee::$name2(data) => data.to_value(),
+          )*
+        }
+      }
     }
 
     // Debugger から送るパケットをバイトに変換
@@ -136,7 +165,7 @@ macro_rules! jdwp_command_map {
         // Reply Packet
         let err_code = u16::read_from(&mut cursor, con).ok()?;
         if err_code != 0 {
-          panic!("Error code: {}", err_code)
+          return None
         }
 
         match send_from_debugger[id as usize] {
@@ -164,97 +193,97 @@ macro_rules! jdwp_command_map {
 
 // Auto generated
 jdwp_command_map!(
-  VirtualMachineVersion((), VirtualMachineVersionReceive) => (1, 1),
-  VirtualMachineClassesBySignature(VirtualMachineClassesBySignatureSend, VirtualMachineClassesBySignatureReceive) => (1, 2),
-  VirtualMachineAllClasses((), VirtualMachineAllClassesReceive) => (1, 3),
-  VirtualMachineAllThreads((), VirtualMachineAllThreadsReceive) => (1, 4),
-  VirtualMachineTopLevelThreadGroups((), VirtualMachineTopLevelThreadGroupsReceive) => (1, 5),
-  VirtualMachineDispose((), ()) => (1, 6),
-  VirtualMachineIDSizes((), VirtualMachineIDSizesReceive) => (1, 7),
-  VirtualMachineSuspend((), ()) => (1, 8),
-  VirtualMachineResume((), ()) => (1, 9),
-  VirtualMachineExit(VirtualMachineExitSend, ()) => (1, 10),
-  VirtualMachineCreateString(VirtualMachineCreateStringSend, VirtualMachineCreateStringReceive) => (1, 11),
-  VirtualMachineCapabilities((), VirtualMachineCapabilitiesReceive) => (1, 12),
-  VirtualMachineClassPaths((), VirtualMachineClassPathsReceive) => (1, 13),
-  VirtualMachineDisposeObjects(VirtualMachineDisposeObjectsSend, ()) => (1, 14),
-  VirtualMachineHoldEvents((), ()) => (1, 15),
-  VirtualMachineReleaseEvents((), ()) => (1, 16),
-  VirtualMachineCapabilitiesNew((), VirtualMachineCapabilitiesNewReceive) => (1, 17),
-  VirtualMachineRedefineClasses(VirtualMachineRedefineClassesSend, ()) => (1, 18),
-  VirtualMachineSetDefaultStratum(VirtualMachineSetDefaultStratumSend, ()) => (1, 19),
-  VirtualMachineAllClassesWithGeneric((), VirtualMachineAllClassesWithGenericReceive) => (1, 20),
-  VirtualMachineInstanceCounts(VirtualMachineInstanceCountsSend, VirtualMachineInstanceCountsReceive) => (1, 21),
-  ReferenceTypeSignature(ReferenceTypeSignatureSend, ReferenceTypeSignatureReceive) => (2, 1),
-  ReferenceTypeClassLoader(ReferenceTypeClassLoaderSend, ReferenceTypeClassLoaderReceive) => (2, 2),
-  ReferenceTypeModifiers(ReferenceTypeModifiersSend, ReferenceTypeModifiersReceive) => (2, 3),
-  ReferenceTypeFields(ReferenceTypeFieldsSend, ReferenceTypeFieldsReceive) => (2, 4),
-  ReferenceTypeMethods(ReferenceTypeMethodsSend, ReferenceTypeMethodsReceive) => (2, 5),
-  ReferenceTypeGetValues(ReferenceTypeGetValuesSend, ReferenceTypeGetValuesReceive) => (2, 6),
-  ReferenceTypeSourceFile(ReferenceTypeSourceFileSend, ReferenceTypeSourceFileReceive) => (2, 7),
-  ReferenceTypeNestedTypes(ReferenceTypeNestedTypesSend, ReferenceTypeNestedTypesReceive) => (2, 8),
-  ReferenceTypeStatus(ReferenceTypeStatusSend, ReferenceTypeStatusReceive) => (2, 9),
-  ReferenceTypeInterfaces(ReferenceTypeInterfacesSend, ReferenceTypeInterfacesReceive) => (2, 10),
-  ReferenceTypeClassObject(ReferenceTypeClassObjectSend, ReferenceTypeClassObjectReceive) => (2, 11),
-  ReferenceTypeSourceDebugExtension(ReferenceTypeSourceDebugExtensionSend, ReferenceTypeSourceDebugExtensionReceive) => (2, 12),
-  ReferenceTypeSignatureWithGeneric(ReferenceTypeSignatureWithGenericSend, ReferenceTypeSignatureWithGenericReceive) => (2, 13),
-  ReferenceTypeFieldsWithGeneric(ReferenceTypeFieldsWithGenericSend, ReferenceTypeFieldsWithGenericReceive) => (2, 14),
-  ReferenceTypeMethodsWithGeneric(ReferenceTypeMethodsWithGenericSend, ReferenceTypeMethodsWithGenericReceive) => (2, 15),
-  ReferenceTypeInstances(ReferenceTypeInstancesSend, ReferenceTypeInstancesReceive) => (2, 16),
-  ReferenceTypeClassFileVersion(ReferenceTypeClassFileVersionSend, ReferenceTypeClassFileVersionReceive) => (2, 17),
-  ReferenceTypeConstantPool(ReferenceTypeConstantPoolSend, ReferenceTypeConstantPoolReceive) => (2, 18),
-  ClassTypeSuperclass(ClassTypeSuperclassSend, ClassTypeSuperclassReceive) => (3, 1),
-  ClassTypeSetValues(ClassTypeSetValuesSend, ()) => (3, 2),
-  ClassTypeInvokeMethod(ClassTypeInvokeMethodSend, ClassTypeInvokeMethodReceive) => (3, 3),
-  ClassTypeNewInstance(ClassTypeNewInstanceSend, ClassTypeNewInstanceReceive) => (3, 4),
-  ArrayTypeNewInstance(ArrayTypeNewInstanceSend, ArrayTypeNewInstanceReceive) => (4, 1),
-  InterfaceTypeInvokeMethod(InterfaceTypeInvokeMethodSend, InterfaceTypeInvokeMethodReceive) => (5, 1),
-  MethodLineTable(MethodLineTableSend, MethodLineTableReceive) => (6, 1),
-  MethodVariableTable(MethodVariableTableSend, MethodVariableTableReceive) => (6, 2),
-  MethodBytecodes(MethodBytecodesSend, MethodBytecodesReceive) => (6, 3),
-  MethodIsObsolete(MethodIsObsoleteSend, MethodIsObsoleteReceive) => (6, 4),
-  MethodVariableTableWithGeneric(MethodVariableTableWithGenericSend, MethodVariableTableWithGenericReceive) => (6, 5),
-  ObjectReferenceReferenceType(ObjectReferenceReferenceTypeSend, ObjectReferenceReferenceTypeReceive) => (9, 1),
-  ObjectReferenceGetValues(ObjectReferenceGetValuesSend, ObjectReferenceGetValuesReceive) => (9, 2),
-  ObjectReferenceSetValues(ObjectReferenceSetValuesSend, ()) => (9, 3),
-  ObjectReferenceMonitorInfo(ObjectReferenceMonitorInfoSend, ObjectReferenceMonitorInfoReceive) => (9, 5),
-  ObjectReferenceInvokeMethod(ObjectReferenceInvokeMethodSend, ObjectReferenceInvokeMethodReceive) => (9, 6),
-  ObjectReferenceDisableCollection(ObjectReferenceDisableCollectionSend, ()) => (9, 7),
-  ObjectReferenceEnableCollection(ObjectReferenceEnableCollectionSend, ()) => (9, 8),
-  ObjectReferenceIsCollected(ObjectReferenceIsCollectedSend, ObjectReferenceIsCollectedReceive) => (9, 9),
-  ObjectReferenceReferringObjects(ObjectReferenceReferringObjectsSend, ObjectReferenceReferringObjectsReceive) => (9, 10),
-  StringReferenceValue(StringReferenceValueSend, StringReferenceValueReceive) => (10, 1),
-  ThreadReferenceName(ThreadReferenceNameSend, ThreadReferenceNameReceive) => (11, 1),
-  ThreadReferenceSuspend(ThreadReferenceSuspendSend, ()) => (11, 2),
-  ThreadReferenceResume(ThreadReferenceResumeSend, ()) => (11, 3),
-  ThreadReferenceStatus(ThreadReferenceStatusSend, ThreadReferenceStatusReceive) => (11, 4),
-  ThreadReferenceThreadGroup(ThreadReferenceThreadGroupSend, ThreadReferenceThreadGroupReceive) => (11, 5),
-  ThreadReferenceFrames(ThreadReferenceFramesSend, ThreadReferenceFramesReceive) => (11, 6),
-  ThreadReferenceFrameCount(ThreadReferenceFrameCountSend, ThreadReferenceFrameCountReceive) => (11, 7),
-  ThreadReferenceOwnedMonitors(ThreadReferenceOwnedMonitorsSend, ThreadReferenceOwnedMonitorsReceive) => (11, 8),
-  ThreadReferenceCurrentContendedMonitor(ThreadReferenceCurrentContendedMonitorSend, ThreadReferenceCurrentContendedMonitorReceive) => (11, 9),
-  ThreadReferenceStop(ThreadReferenceStopSend, ()) => (11, 10),
-  ThreadReferenceInterrupt(ThreadReferenceInterruptSend, ()) => (11, 11),
-  ThreadReferenceSuspendCount(ThreadReferenceSuspendCountSend, ThreadReferenceSuspendCountReceive) => (11, 12),
-  ThreadReferenceOwnedMonitorsStackDepthInfo(ThreadReferenceOwnedMonitorsStackDepthInfoSend, ThreadReferenceOwnedMonitorsStackDepthInfoReceive) => (11, 13),
-  ThreadReferenceForceEarlyReturn(ThreadReferenceForceEarlyReturnSend, ()) => (11, 14),
-  ThreadGroupReferenceName(ThreadGroupReferenceNameSend, ThreadGroupReferenceNameReceive) => (12, 1),
-  ThreadGroupReferenceParent(ThreadGroupReferenceParentSend, ThreadGroupReferenceParentReceive) => (12, 2),
-  ThreadGroupReferenceChildren(ThreadGroupReferenceChildrenSend, ThreadGroupReferenceChildrenReceive) => (12, 3),
-  ArrayReferenceLength(ArrayReferenceLengthSend, ArrayReferenceLengthReceive) => (13, 1),
-  ArrayReferenceGetValues(ArrayReferenceGetValuesSend, ArrayReferenceGetValuesReceive) => (13, 2),
-  ArrayReferenceSetValues(ArrayReferenceSetValuesSend, ()) => (13, 3),
-  ClassLoaderReferenceVisibleClasses(ClassLoaderReferenceVisibleClassesSend, ClassLoaderReferenceVisibleClassesReceive) => (14, 1),
-  EventRequestSet(EventRequestSetSend, EventRequestSetReceive) => (15, 1),
-  EventRequestClear(EventRequestClearSend, ()) => (15, 2),
-  EventRequestClearAllBreakpoints((), ()) => (15, 3),
-  StackFrameGetValues(StackFrameGetValuesSend, StackFrameGetValuesReceive) => (16, 1),
-  StackFrameSetValues(StackFrameSetValuesSend, ()) => (16, 2),
-  StackFrameThisObject(StackFrameThisObjectSend, StackFrameThisObjectReceive) => (16, 3),
-  StackFramePopFrames(StackFramePopFramesSend, ()) => (16, 4),
-  ClassObjectReferenceReflectedType(ClassObjectReferenceReflectedTypeSend, ClassObjectReferenceReflectedTypeReceive) => (17, 1),
+  VirtualMachineVersion("vmv", (), VirtualMachineVersionReceive) => (1, 1),
+  VirtualMachineClassesBySignature("vmcbs", VirtualMachineClassesBySignatureSend, VirtualMachineClassesBySignatureReceive) => (1, 2),
+  VirtualMachineAllClasses("vmac", (), VirtualMachineAllClassesReceive) => (1, 3),
+  VirtualMachineAllThreads("vmat", (), VirtualMachineAllThreadsReceive) => (1, 4),
+  VirtualMachineTopLevelThreadGroups("vmtltg", (), VirtualMachineTopLevelThreadGroupsReceive) => (1, 5),
+  VirtualMachineDispose("vmd", (), ()) => (1, 6),
+  VirtualMachineIDSizes("vmids", (), VirtualMachineIDSizesReceive) => (1, 7),
+  VirtualMachineSuspend("vms", (), ()) => (1, 8),
+  VirtualMachineResume("vmr", (), ()) => (1, 9),
+  VirtualMachineExit("vme", VirtualMachineExitSend, ()) => (1, 10),
+  VirtualMachineCreateString("vmcs", VirtualMachineCreateStringSend, VirtualMachineCreateStringReceive) => (1, 11),
+  VirtualMachineCapabilities("vmc", (), VirtualMachineCapabilitiesReceive) => (1, 12),
+  VirtualMachineClassPaths("vmcp", (), VirtualMachineClassPathsReceive) => (1, 13),
+  VirtualMachineDisposeObjects("vmdo", VirtualMachineDisposeObjectsSend, ()) => (1, 14),
+  VirtualMachineHoldEvents("vmhe", (), ()) => (1, 15),
+  VirtualMachineReleaseEvents("vmre", (), ()) => (1, 16),
+  VirtualMachineCapabilitiesNew("vmcn", (), VirtualMachineCapabilitiesNewReceive) => (1, 17),
+  VirtualMachineRedefineClasses("vmrc", VirtualMachineRedefineClassesSend, ()) => (1, 18),
+  VirtualMachineSetDefaultStratum("vmsds", VirtualMachineSetDefaultStratumSend, ()) => (1, 19),
+  VirtualMachineAllClassesWithGeneric("vmacwg", (), VirtualMachineAllClassesWithGenericReceive) => (1, 20),
+  VirtualMachineInstanceCounts("vmic", VirtualMachineInstanceCountsSend, VirtualMachineInstanceCountsReceive) => (1, 21),
+  ReferenceTypeSignature("rts1", ReferenceTypeSignatureSend, ReferenceTypeSignatureReceive) => (2, 1),
+  ReferenceTypeClassLoader("rtcl", ReferenceTypeClassLoaderSend, ReferenceTypeClassLoaderReceive) => (2, 2),
+  ReferenceTypeModifiers("rtm1", ReferenceTypeModifiersSend, ReferenceTypeModifiersReceive) => (2, 3),
+  ReferenceTypeFields("rtf", ReferenceTypeFieldsSend, ReferenceTypeFieldsReceive) => (2, 4),
+  ReferenceTypeMethods("rtm2", ReferenceTypeMethodsSend, ReferenceTypeMethodsReceive) => (2, 5),
+  ReferenceTypeGetValues("rtgv", ReferenceTypeGetValuesSend, ReferenceTypeGetValuesReceive) => (2, 6),
+  ReferenceTypeSourceFile("rtsf", ReferenceTypeSourceFileSend, ReferenceTypeSourceFileReceive) => (2, 7),
+  ReferenceTypeNestedTypes("rtnt", ReferenceTypeNestedTypesSend, ReferenceTypeNestedTypesReceive) => (2, 8),
+  ReferenceTypeStatus("rts2", ReferenceTypeStatusSend, ReferenceTypeStatusReceive) => (2, 9),
+  ReferenceTypeInterfaces("rti1", ReferenceTypeInterfacesSend, ReferenceTypeInterfacesReceive) => (2, 10),
+  ReferenceTypeClassObject("rtco", ReferenceTypeClassObjectSend, ReferenceTypeClassObjectReceive) => (2, 11),
+  ReferenceTypeSourceDebugExtension("rtsde", ReferenceTypeSourceDebugExtensionSend, ReferenceTypeSourceDebugExtensionReceive) => (2, 12),
+  ReferenceTypeSignatureWithGeneric("rtswg", ReferenceTypeSignatureWithGenericSend, ReferenceTypeSignatureWithGenericReceive) => (2, 13),
+  ReferenceTypeFieldsWithGeneric("rtfwg", ReferenceTypeFieldsWithGenericSend, ReferenceTypeFieldsWithGenericReceive) => (2, 14),
+  ReferenceTypeMethodsWithGeneric("rtmwg", ReferenceTypeMethodsWithGenericSend, ReferenceTypeMethodsWithGenericReceive) => (2, 15),
+  ReferenceTypeInstances("rti2", ReferenceTypeInstancesSend, ReferenceTypeInstancesReceive) => (2, 16),
+  ReferenceTypeClassFileVersion("rtcfv", ReferenceTypeClassFileVersionSend, ReferenceTypeClassFileVersionReceive) => (2, 17),
+  ReferenceTypeConstantPool("rtcp", ReferenceTypeConstantPoolSend, ReferenceTypeConstantPoolReceive) => (2, 18),
+  ClassTypeSuperclass("cts", ClassTypeSuperclassSend, ClassTypeSuperclassReceive) => (3, 1),
+  ClassTypeSetValues("ctsv", ClassTypeSetValuesSend, ()) => (3, 2),
+  ClassTypeInvokeMethod("ctim", ClassTypeInvokeMethodSend, ClassTypeInvokeMethodReceive) => (3, 3),
+  ClassTypeNewInstance("ctni", ClassTypeNewInstanceSend, ClassTypeNewInstanceReceive) => (3, 4),
+  ArrayTypeNewInstance("atni", ArrayTypeNewInstanceSend, ArrayTypeNewInstanceReceive) => (4, 1),
+  InterfaceTypeInvokeMethod("itim", InterfaceTypeInvokeMethodSend, InterfaceTypeInvokeMethodReceive) => (5, 1),
+  MethodLineTable("mlt", MethodLineTableSend, MethodLineTableReceive) => (6, 1),
+  MethodVariableTable("mvt", MethodVariableTableSend, MethodVariableTableReceive) => (6, 2),
+  MethodBytecodes("mb", MethodBytecodesSend, MethodBytecodesReceive) => (6, 3),
+  MethodIsObsolete("mio", MethodIsObsoleteSend, MethodIsObsoleteReceive) => (6, 4),
+  MethodVariableTableWithGeneric("mvtwg", MethodVariableTableWithGenericSend, MethodVariableTableWithGenericReceive) => (6, 5),
+  ObjectReferenceReferenceType("orrt", ObjectReferenceReferenceTypeSend, ObjectReferenceReferenceTypeReceive) => (9, 1),
+  ObjectReferenceGetValues("orgv", ObjectReferenceGetValuesSend, ObjectReferenceGetValuesReceive) => (9, 2),
+  ObjectReferenceSetValues("orsv", ObjectReferenceSetValuesSend, ()) => (9, 3),
+  ObjectReferenceMonitorInfo("ormi", ObjectReferenceMonitorInfoSend, ObjectReferenceMonitorInfoReceive) => (9, 5),
+  ObjectReferenceInvokeMethod("orim", ObjectReferenceInvokeMethodSend, ObjectReferenceInvokeMethodReceive) => (9, 6),
+  ObjectReferenceDisableCollection("ordc", ObjectReferenceDisableCollectionSend, ()) => (9, 7),
+  ObjectReferenceEnableCollection("orec", ObjectReferenceEnableCollectionSend, ()) => (9, 8),
+  ObjectReferenceIsCollected("oric", ObjectReferenceIsCollectedSend, ObjectReferenceIsCollectedReceive) => (9, 9),
+  ObjectReferenceReferringObjects("orro", ObjectReferenceReferringObjectsSend, ObjectReferenceReferringObjectsReceive) => (9, 10),
+  StringReferenceValue("srv", StringReferenceValueSend, StringReferenceValueReceive) => (10, 1),
+  ThreadReferenceName("trn", ThreadReferenceNameSend, ThreadReferenceNameReceive) => (11, 1),
+  ThreadReferenceSuspend("trs1", ThreadReferenceSuspendSend, ()) => (11, 2),
+  ThreadReferenceResume("trr", ThreadReferenceResumeSend, ()) => (11, 3),
+  ThreadReferenceStatus("trs2", ThreadReferenceStatusSend, ThreadReferenceStatusReceive) => (11, 4),
+  ThreadReferenceThreadGroup("trtg", ThreadReferenceThreadGroupSend, ThreadReferenceThreadGroupReceive) => (11, 5),
+  ThreadReferenceFrames("trf", ThreadReferenceFramesSend, ThreadReferenceFramesReceive) => (11, 6),
+  ThreadReferenceFrameCount("trfc", ThreadReferenceFrameCountSend, ThreadReferenceFrameCountReceive) => (11, 7),
+  ThreadReferenceOwnedMonitors("trom", ThreadReferenceOwnedMonitorsSend, ThreadReferenceOwnedMonitorsReceive) => (11, 8),
+  ThreadReferenceCurrentContendedMonitor("trccm", ThreadReferenceCurrentContendedMonitorSend, ThreadReferenceCurrentContendedMonitorReceive) => (11, 9),
+  ThreadReferenceStop("trs3", ThreadReferenceStopSend, ()) => (11, 10),
+  ThreadReferenceInterrupt("tri", ThreadReferenceInterruptSend, ()) => (11, 11),
+  ThreadReferenceSuspendCount("trsc", ThreadReferenceSuspendCountSend, ThreadReferenceSuspendCountReceive) => (11, 12),
+  ThreadReferenceOwnedMonitorsStackDepthInfo("tromsdi", ThreadReferenceOwnedMonitorsStackDepthInfoSend, ThreadReferenceOwnedMonitorsStackDepthInfoReceive) => (11, 13),
+  ThreadReferenceForceEarlyReturn("trfer", ThreadReferenceForceEarlyReturnSend, ()) => (11, 14),
+  ThreadGroupReferenceName("tgrn", ThreadGroupReferenceNameSend, ThreadGroupReferenceNameReceive) => (12, 1),
+  ThreadGroupReferenceParent("tgrp", ThreadGroupReferenceParentSend, ThreadGroupReferenceParentReceive) => (12, 2),
+  ThreadGroupReferenceChildren("tgrc", ThreadGroupReferenceChildrenSend, ThreadGroupReferenceChildrenReceive) => (12, 3),
+  ArrayReferenceLength("arl", ArrayReferenceLengthSend, ArrayReferenceLengthReceive) => (13, 1),
+  ArrayReferenceGetValues("argv", ArrayReferenceGetValuesSend, ArrayReferenceGetValuesReceive) => (13, 2),
+  ArrayReferenceSetValues("arsv", ArrayReferenceSetValuesSend, ()) => (13, 3),
+  ClassLoaderReferenceVisibleClasses("clrvc", ClassLoaderReferenceVisibleClassesSend, ClassLoaderReferenceVisibleClassesReceive) => (14, 1),
+  EventRequestSet("ers", EventRequestSetSend, EventRequestSetReceive) => (15, 1),
+  EventRequestClear("erc", EventRequestClearSend, ()) => (15, 2),
+  EventRequestClearAllBreakpoints("ercab", (), ()) => (15, 3),
+  StackFrameGetValues("sfgv", StackFrameGetValuesSend, StackFrameGetValuesReceive) => (16, 1),
+  StackFrameSetValues("sfsv", StackFrameSetValuesSend, ()) => (16, 2),
+  StackFrameThisObject("sfto", StackFrameThisObjectSend, StackFrameThisObjectReceive) => (16, 3),
+  StackFramePopFrames("sfpf", StackFramePopFramesSend, ()) => (16, 4),
+  ClassObjectReferenceReflectedType("corrt", ClassObjectReferenceReflectedTypeSend, ClassObjectReferenceReflectedTypeReceive) => (17, 1),
   ;
-  EventComposite((), EventCompositeReceive) => (64, 100),
+  EventComposite("ec", (), EventCompositeReceive) => (64, 100),
 );
 
 pub async fn send_packet<W: AsyncWrite + Unpin>(
@@ -269,19 +298,83 @@ pub async fn send_packet<W: AsyncWrite + Unpin>(
 }
 
 pub async fn receive_packet<R: AsyncRead + Unpin>(
-  reader: &mut R,
+  packet_length_without_first: usize,
+  reader_without_length: &mut R,
   payloads: &[JDWPPacketDataFromDebugger],
   context: &JDWPContext,
 ) -> Option<(JDWPPacketDataFromDebuggee, i32)> {
-  let length = reader.read_u32().await.ok()?;
-
   let data = {
-    let mut buf = vec![0; (length - 4) as usize];
-    reader.read_exact(&mut buf).await.ok()?;
+    let mut buf = vec![0; packet_length_without_first];
+    reader_without_length.read_exact(&mut buf).await.ok()?;
     buf
   };
 
   parse_packet_from_debuggee(payloads, &data, context)
+}
+
+// Repeated のやつ
+impl<Amount: TryInto<usize> + PacketData + Copy, T: PacketData + Sized> PacketData
+  for (Amount, Vec<T>)
+{
+  fn write_to<W: Write>(&self, w: &mut W) -> Result<(), std::io::Error> {
+    self.0.write_to(w)?;
+    for e in self.1.iter() {
+      e.write_to(w)?;
+    }
+    Ok(())
+  }
+
+  fn read_from<R: Read>(r: &mut R, context: &JDWPContext) -> Result<Self, std::io::Error> {
+    let amount = Amount::read_from(r, context)?;
+    let mut elements = Vec::new();
+    for _ in 0..amount
+      .try_into()
+      .map_err(|_| std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid amount"))?
+    {
+      let element = T::read_from(r, context)?;
+      elements.push(element);
+    }
+    Ok((amount, elements))
+  }
+}
+
+impl<Amount: TryInto<usize> + ConvPrettyIOValue + Copy, T: ConvPrettyIOValue + Sized>
+  ConvPrettyIOValue for (Amount, Vec<T>)
+{
+  fn from_value(input: &Vec<PrettyIOKind>) -> Option<(Self, Vec<PrettyIOKind>)> {
+    let (amount, mut remaining) = Amount::from_value(input)?;
+    let mut elements = Vec::new();
+    for _ in 0..amount.try_into().ok()? {
+      let (element, rem) = T::from_value(&remaining)?;
+      elements.push(element);
+      remaining = rem;
+    }
+    Some(((amount, elements), remaining))
+  }
+
+  fn to_value(&self) -> Vec<PrettyIOKind> {
+    let (amount, elements) = (self.0, &self.1);
+
+    let mut result = Vec::new();
+    result.extend(amount.to_value());
+    result.push(PrettyIOKind::Repeated(
+      elements
+        .iter()
+        .flat_map(|e| e.to_value())
+        .map(Box::new)
+        .collect(),
+    ));
+    result
+  }
+
+  fn from_value_require_types() -> Vec<PrettyIOKindTypes> {
+    let mut result = Vec::new();
+
+    result.extend(<Amount>::from_value_require_types());
+    result.push(PrettyIOKindTypes::Repeated(<T>::from_value_require_types()));
+
+    result
+  }
 }
 
 // --------------------------------------
@@ -323,6 +416,20 @@ impl PacketData for JDWPString {
     let data = String::from_utf8(buf)
       .map_err(|_| std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid UTF-8"))?;
     Ok(JDWPString { length, data })
+  }
+}
+
+impl ConvPrettyIOValue for JDWPString {
+  fn from_value(input: &Vec<PrettyIOKind>) -> Option<(Self, Vec<PrettyIOKind>)> {
+    String::from_value(input).map(|(s, rem)| (JDWPString::from(s.as_str()), rem))
+  }
+
+  fn to_value(&self) -> Vec<PrettyIOKind> {
+    vec![PrettyIOKind::String(self.data.clone())]
+  }
+
+  fn from_value_require_types() -> Vec<PrettyIOKindTypes> {
+    vec![PrettyIOKindTypes::String]
   }
 }
 
@@ -435,6 +542,7 @@ impl PacketData for JDWPIDLengthEqObject {
     })
   }
 }
+impl_conv_pretty_io_value_struct!(JDWPIDLengthEqObject, id: u64,);
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct JDWPTaggedObjectID {
@@ -464,6 +572,7 @@ impl PacketData for JDWPTaggedObjectID {
     })
   }
 }
+impl_conv_pretty_io_value_struct!(JDWPTaggedObjectID, tag: u8, method_id: u64,);
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct JDWPIDLengthEqReferenceType {
@@ -487,6 +596,7 @@ impl PacketData for JDWPIDLengthEqReferenceType {
     })
   }
 }
+impl_conv_pretty_io_value_struct!(JDWPIDLengthEqReferenceType, id: u64,);
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct JDWPIDLengthEqMethod {
@@ -511,6 +621,7 @@ impl PacketData for JDWPIDLengthEqMethod {
     })
   }
 }
+impl_conv_pretty_io_value_struct!(JDWPIDLengthEqMethod, id: u64,);
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct JDWPIDLengthEqField {
@@ -535,6 +646,7 @@ impl PacketData for JDWPIDLengthEqField {
     })
   }
 }
+impl_conv_pretty_io_value_struct!(JDWPIDLengthEqField, id: u64,);
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct JDWPIDLengthEqFrame {
@@ -557,6 +669,57 @@ impl PacketData for JDWPIDLengthEqFrame {
     Ok(JDWPIDLengthEqFrame {
       id: u64::from_be_bytes(id_bytes.try_into().unwrap()),
     })
+  }
+}
+impl_conv_pretty_io_value_struct!(JDWPIDLengthEqFrame, id: u64,);
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+#[repr(u8)]
+pub enum JDWPTypeTagConstants {
+  Class = 1,
+  Interface = 2,
+  Array = 3,
+}
+
+impl PacketData for JDWPTypeTagConstants {
+  fn write_to<W: Write>(&self, w: &mut W) -> Result<(), std::io::Error> {
+    w.write_all(&[*self as u8])
+  }
+  fn read_from<R: Read>(r: &mut R, _c: &JDWPContext) -> Result<Self, std::io::Error> {
+    let mut data = [0u8; 1];
+    r.read_exact(&mut data)?;
+    match data[0] {
+      1 => Ok(JDWPTypeTagConstants::Class),
+      2 => Ok(JDWPTypeTagConstants::Interface),
+      3 => Ok(JDWPTypeTagConstants::Array),
+      _ => Err(std::io::Error::new(
+        std::io::ErrorKind::InvalidData,
+        "Invalid type tag constant",
+      )),
+    }
+  }
+}
+
+impl ConvPrettyIOValue for JDWPTypeTagConstants {
+  fn from_value(input: &Vec<PrettyIOKind>) -> Option<(Self, Vec<PrettyIOKind>)> {
+    let (tag, rest) = u8::from_value(input)?;
+    Some((
+      match tag {
+        1 => Some(JDWPTypeTagConstants::Class),
+        2 => Some(JDWPTypeTagConstants::Interface),
+        3 => Some(JDWPTypeTagConstants::Array),
+        _ => None,
+      }?,
+      rest,
+    ))
+  }
+
+  fn to_value(&self) -> Vec<PrettyIOKind> {
+    vec![PrettyIOKind::Int(*self as i64)]
+  }
+
+  fn from_value_require_types() -> Vec<PrettyIOKindTypes> {
+    vec![PrettyIOKindTypes::Int]
   }
 }
 
@@ -610,6 +773,42 @@ impl PacketData for JDWPTagConstants {
         "Invalid tag constant",
       )),
     }
+  }
+}
+
+impl ConvPrettyIOValue for JDWPTagConstants {
+  fn from_value(input: &Vec<PrettyIOKind>) -> Option<(Self, Vec<PrettyIOKind>)> {
+    let (tag, rest) = u8::from_value(input)?;
+    Some((
+      match tag {
+        b'[' => Some(JDWPTagConstants::Array),
+        b'B' => Some(JDWPTagConstants::Byte),
+        b'C' => Some(JDWPTagConstants::Char),
+        b'L' => Some(JDWPTagConstants::Object),
+        b'F' => Some(JDWPTagConstants::Float),
+        b'D' => Some(JDWPTagConstants::Double),
+        b'I' => Some(JDWPTagConstants::Int),
+        b'J' => Some(JDWPTagConstants::Long),
+        b'S' => Some(JDWPTagConstants::Short),
+        b'V' => Some(JDWPTagConstants::Void),
+        b'Z' => Some(JDWPTagConstants::Boolean),
+        b's' => Some(JDWPTagConstants::String),
+        b't' => Some(JDWPTagConstants::Thread),
+        b'g' => Some(JDWPTagConstants::ThreadGroup),
+        b'l' => Some(JDWPTagConstants::ClassLoader),
+        b'c' => Some(JDWPTagConstants::ClassObject),
+        _ => None,
+      }?,
+      rest,
+    ))
+  }
+
+  fn to_value(&self) -> Vec<PrettyIOKind> {
+    vec![PrettyIOKind::Int(*self as i64)]
+  }
+
+  fn from_value_require_types() -> Vec<PrettyIOKindTypes> {
+    vec![PrettyIOKindTypes::Int]
   }
 }
 
@@ -750,6 +949,155 @@ impl PacketData for JDWPValue {
   }
 }
 
+impl ConvPrettyIOValue for JDWPValue {
+  fn from_value(input: &Vec<PrettyIOKind>) -> Option<(Self, Vec<PrettyIOKind>)> {
+    if input.is_empty() {
+      return None;
+    }
+    let (code, remaining) = u8::from_value(input)?;
+    match code {
+      91 => {
+        let (v, rem) = JDWPIDLengthEqObject::from_value(&remaining)?;
+        Some((JDWPValue::Array(v), rem))
+      }
+      66 => {
+        let (v, rem) = i8::from_value(&remaining)?;
+        Some((JDWPValue::Byte(v), rem))
+      }
+      67 => {
+        let (v, rem) = i16::from_value(&remaining)?;
+        Some((JDWPValue::Char(v), rem))
+      }
+      76 => {
+        let (v, rem) = JDWPIDLengthEqObject::from_value(&remaining)?;
+        Some((JDWPValue::Object(v), rem))
+      }
+      70 => {
+        let (v, rem) = f32::from_value(&remaining)?;
+        Some((JDWPValue::Float(v), rem))
+      }
+      68 => {
+        let (v, rem) = f64::from_value(&remaining)?;
+        Some((JDWPValue::Double(v), rem))
+      }
+      73 => {
+        let (v, rem) = i32::from_value(&remaining)?;
+        Some((JDWPValue::Int(v), rem))
+      }
+      74 => {
+        let (v, rem) = i64::from_value(&remaining)?;
+        Some((JDWPValue::Long(v), rem))
+      }
+      83 => {
+        let (v, rem) = i16::from_value(&remaining)?;
+        Some((JDWPValue::Short(v), rem))
+      }
+      86 => Some((JDWPValue::Void, remaining.to_vec())),
+      90 => {
+        let (v, rem) = bool::from_value(&remaining)?;
+        Some((JDWPValue::Boolean(v), rem))
+      }
+      115 => {
+        let (v, rem) = JDWPIDLengthEqObject::from_value(&remaining)?;
+        Some((JDWPValue::String(v), rem))
+      }
+      116 => {
+        let (v, rem) = JDWPIDLengthEqObject::from_value(&remaining)?;
+        Some((JDWPValue::Thread(v), rem))
+      }
+      103 => {
+        let (v, rem) = JDWPIDLengthEqObject::from_value(&remaining)?;
+        Some((JDWPValue::ThreadGroup(v), rem))
+      }
+      108 => {
+        let (v, rem) = JDWPIDLengthEqObject::from_value(&remaining)?;
+        Some((JDWPValue::ClassLoader(v), rem))
+      }
+      99 => {
+        let (v, rem) = JDWPIDLengthEqObject::from_value(&remaining)?;
+        Some((JDWPValue::ClassObject(v), rem))
+      }
+      _ => None,
+    }
+  }
+
+  fn to_value(&self) -> Vec<PrettyIOKind> {
+    let mut result = Vec::new();
+
+    match self {
+      JDWPValue::Array(v) => {
+        result.extend(91_u8.to_value());
+        result.extend(v.to_value());
+      }
+      JDWPValue::Byte(v) => {
+        result.extend(66_u8.to_value());
+        result.extend(v.to_value());
+      }
+      JDWPValue::Char(v) => {
+        result.extend(67_u8.to_value());
+        result.extend(v.to_value());
+      }
+      JDWPValue::Object(v) => {
+        result.extend(76_u8.to_value());
+        result.extend(v.to_value());
+      }
+      JDWPValue::Float(v) => {
+        result.extend(70_u8.to_value());
+        result.extend(v.to_value());
+      }
+      JDWPValue::Double(v) => {
+        result.extend(68_u8.to_value());
+        result.extend(v.to_value());
+      }
+      JDWPValue::Int(v) => {
+        result.extend(73_u8.to_value());
+        result.extend(v.to_value());
+      }
+      JDWPValue::Long(v) => {
+        result.extend(74_u8.to_value());
+        result.extend(v.to_value());
+      }
+      JDWPValue::Short(v) => {
+        result.extend(83_u8.to_value());
+        result.extend(v.to_value());
+      }
+      JDWPValue::Void => {
+        result.extend(86_u8.to_value());
+      }
+      JDWPValue::Boolean(v) => {
+        result.extend(90_u8.to_value());
+        result.extend(v.to_value());
+      }
+      JDWPValue::String(v) => {
+        result.extend(115_u8.to_value());
+        result.extend(v.to_value());
+      }
+      JDWPValue::Thread(v) => {
+        result.extend(116_u8.to_value());
+        result.extend(v.to_value());
+      }
+      JDWPValue::ThreadGroup(v) => {
+        result.extend(103_u8.to_value());
+        result.extend(v.to_value());
+      }
+      JDWPValue::ClassLoader(v) => {
+        result.extend(108_u8.to_value());
+        result.extend(v.to_value());
+      }
+      JDWPValue::ClassObject(v) => {
+        result.extend(99_u8.to_value());
+        result.extend(v.to_value());
+      }
+    }
+
+    result
+  }
+
+  fn from_value_require_types() -> Vec<PrettyIOKindTypes> {
+    vec![PrettyIOKindTypes::Int, PrettyIOKindTypes::Variable]
+  }
+}
+
 impl JDWPValue {
   pub fn read_untagged_from<R: Read>(
     r: &mut R,
@@ -807,15 +1155,14 @@ impl JDWPValue {
 #[derive(Debug, PartialEq, Clone)]
 pub struct JDWPArrayRegion {
   pub tag: JDWPTagConstants,
-  pub length: u32,
-  pub elements: Vec<JDWPValue>,
+  pub elements: (u32, Vec<JDWPValue>),
 }
 
 impl PacketData for JDWPArrayRegion {
   fn write_to<W: Write>(&self, w: &mut W) -> Result<(), std::io::Error> {
     self.tag.write_to(w)?;
-    self.length.write_to(w)?;
-    for elem in &self.elements {
+    self.elements.0.write_to(w)?;
+    for elem in &self.elements.1 {
       if self.tag.is_primitive() {
         elem.write_untagged_to(w)?;
       } else {
@@ -838,15 +1185,16 @@ impl PacketData for JDWPArrayRegion {
     }
     Ok(JDWPArrayRegion {
       tag,
-      length,
-      elements,
+      elements: (length, elements),
     })
   }
 }
 
+impl_conv_pretty_io_value_struct!(JDWPArrayRegion, tag: JDWPTagConstants, elements: (u32, Vec<JDWPValue>),);
+
 #[derive(Debug, PartialEq, Clone)]
 pub struct JDWPLocation {
-  pub tag: JDWPTagConstants,
+  pub tag: JDWPTypeTagConstants,
   pub class_id: JDWPIDLengthEqReferenceType,
   pub method_id: JDWPIDLengthEqMethod,
   pub index: u64,
@@ -861,7 +1209,7 @@ impl PacketData for JDWPLocation {
   }
 
   fn read_from<R: Read>(r: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
-    let tag = JDWPTagConstants::read_from(r, c)?;
+    let tag = JDWPTypeTagConstants::read_from(r, c)?;
     let class_id = JDWPIDLengthEqReferenceType::read_from(r, c)?;
     let method_id = JDWPIDLengthEqMethod::read_from(r, c)?;
     let index = u64::read_from(r, c)?;
@@ -873,6 +1221,8 @@ impl PacketData for JDWPLocation {
     })
   }
 }
+
+impl_conv_pretty_io_value_struct!(JDWPLocation, tag: JDWPTypeTagConstants, class_id: JDWPIDLengthEqReferenceType, method_id: JDWPIDLengthEqMethod, index: u64,);
 
 #[derive(Debug, PartialEq, Clone)]
 #[repr(u8)]
@@ -939,5 +1289,20 @@ impl PacketData for JDWPEventKindConstants {
     let mut data = [0u8; 1];
     r.read_exact(&mut data)?;
     Ok(JDWPEventKindConstants::from(data[0]))
+  }
+}
+
+impl ConvPrettyIOValue for JDWPEventKindConstants {
+  fn from_value(input: &Vec<PrettyIOKind>) -> Option<(Self, Vec<PrettyIOKind>)> {
+    let (value, rest) = u8::from_value(input)?;
+    Some((JDWPEventKindConstants::from(value), rest))
+  }
+
+  fn to_value(&self) -> Vec<PrettyIOKind> {
+    vec![PrettyIOKind::Int(self.clone() as i64)]
+  }
+
+  fn from_value_require_types() -> Vec<PrettyIOKindTypes> {
+    vec![PrettyIOKindTypes::Int]
   }
 }
