@@ -2,7 +2,7 @@
 pub mod conv_input;
 
 use std::{
-  fmt::Debug,
+  fmt::{Debug, Display},
   io::{Read, Write},
 };
 
@@ -338,6 +338,25 @@ impl<Amount: TryInto<usize> + PacketData + Copy, T: PacketData + Sized> PacketDa
   }
 }
 
+impl<T: PacketData + Sized> PacketData for Vec<T> {
+  fn write_to<W: Write>(&self, w: &mut W) -> Result<(), std::io::Error> {
+    (self.len() as u32, self.clone()).write_to(w)?;
+    Ok(())
+  }
+
+  fn read_from<R: Read>(r: &mut R, context: &JDWPContext) -> Result<Self, std::io::Error> {
+    let (amount, elements) = <(u32, Vec<T>)>::read_from(r, context)?;
+    if amount != elements.len() as u32 {
+      return Err(std::io::Error::new(
+        std::io::ErrorKind::InvalidData,
+        "Amount mismatch",
+      ));
+    }
+
+    Ok(elements)
+  }
+}
+
 impl<Amount: TryInto<usize> + ConvPrettyIOValue + Copy, T: ConvPrettyIOValue + Sized>
   ConvPrettyIOValue for (Amount, Vec<T>)
 {
@@ -377,10 +396,26 @@ impl<Amount: TryInto<usize> + ConvPrettyIOValue + Copy, T: ConvPrettyIOValue + S
   }
 }
 
+impl<T: ConvPrettyIOValue + Sized + Clone> ConvPrettyIOValue for Vec<T> {
+  fn from_value(input: &Vec<PrettyIOKind>) -> Option<(Self, Vec<PrettyIOKind>)> {
+    let ((amount, elements), remaining) = <(u32, Vec<T>)>::from_value(input)?;
+    if amount != elements.len() as u32 {
+      return None;
+    }
+    Some((elements, remaining))
+  }
+  fn to_value(&self) -> Vec<PrettyIOKind> {
+    <(u32, Vec<T>)>::to_value(&(self.len() as u32, self.to_vec()))
+  }
+  fn from_value_require_types() -> Vec<PrettyIOKindTypes> {
+    <(u32, Vec<T>)>::from_value_require_types()
+  }
+}
+
 // --------------------------------------
 // "common data types" for JDWP
 
-#[derive(PartialEq, Eq, Hash, Clone)]
+#[derive(PartialEq, Eq, Hash, Clone, Debug)]
 pub struct JDWPString {
   pub length: i32,
   pub data: String,
@@ -396,7 +431,7 @@ impl From<&str> for JDWPString {
   }
 }
 
-impl Debug for JDWPString {
+impl Display for JDWPString {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     write!(f, "{}", self.data)
   }
@@ -462,7 +497,7 @@ impl PacketData for JDWPTypeTag {
 
 #[derive(PartialEq, Eq, Hash, Clone)]
 struct JDWPClassStatus {
-  status: i32,
+  pub status: i32,
 }
 
 impl PacketData for JDWPClassStatus {
@@ -493,61 +528,61 @@ impl Debug for JDWPClassStatus {
   }
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
-pub struct JDWPReferenceTypeID {
-  ref_id: u64,
-}
+macro_rules! derive_for_ids {
+  ($struct:ident, $id:ident, $id_size:ident) => {
+    impl PacketData for $struct {
+      fn write_to<W: Write>(&self, w: &mut W) -> Result<(), std::io::Error> {
+        w.write_all(&self.$id.to_be_bytes())
+      }
+      fn read_from<R: Read>(r: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
+        let mut ref_id_bytes = vec![
+          0u8;
+          c.$id_size.ok_or(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            "Reference ID size not set in context",
+          ))? as usize
+        ];
+        r.read_exact(&mut ref_id_bytes)?;
+        Ok($struct {
+          $id: u64::from_be_bytes(ref_id_bytes.try_into().map_err(|_| {
+            std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid reference ID size")
+          })?),
+        })
+      }
+    }
 
-impl PacketData for JDWPReferenceTypeID {
-  fn write_to<W: Write>(&self, w: &mut W) -> Result<(), std::io::Error> {
-    w.write_all(&self.ref_id.to_be_bytes())
-  }
-  fn read_from<R: Read>(r: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
-    let mut ref_id_bytes = vec![
-      0u8;
-      c.reference_type_id_size.ok_or(std::io::Error::new(
-        std::io::ErrorKind::InvalidData,
-        "Reference ID size not set in context",
-      ))? as usize
-    ];
-    r.read_exact(&mut ref_id_bytes)?;
-    Ok(JDWPReferenceTypeID {
-      ref_id: u64::from_be_bytes(ref_id_bytes.try_into().map_err(|_| {
-        std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid reference ID size")
-      })?),
-    })
-  }
+    impl From<u64> for $struct {
+      fn from(val: u64) -> Self {
+        $struct { $id: val }
+      }
+    }
+
+    impl From<$struct> for u64 {
+      fn from(val: $struct) -> u64 {
+        val.$id
+      }
+    }
+
+    impl Display for $struct {
+      fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "0x{:X}", self.$id)
+      }
+    }
+
+    impl_conv_pretty_io_value_struct!($struct, $id: u64,);
+  };
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct JDWPIDLengthEqObject {
-  id: u64,
+  pub id: u64,
 }
-impl PacketData for JDWPIDLengthEqObject {
-  fn write_to<W: Write>(&self, w: &mut W) -> Result<(), std::io::Error> {
-    w.write_all(&self.id.to_be_bytes())
-  }
-  fn read_from<R: Read>(r: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
-    // 契約上、ID は 8バイト以下
-    let mut id_bytes = vec![
-      0u8;
-      c.object_id_size.ok_or(std::io::Error::new(
-        std::io::ErrorKind::InvalidData,
-        "Object ID size not set in context",
-      ))? as usize
-    ];
-    r.read_exact(&mut id_bytes)?;
-    Ok(JDWPIDLengthEqObject {
-      id: u64::from_be_bytes(id_bytes.try_into().unwrap()),
-    })
-  }
-}
-impl_conv_pretty_io_value_struct!(JDWPIDLengthEqObject, id: u64,);
+derive_for_ids!(JDWPIDLengthEqObject, id, object_id_size);
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct JDWPTaggedObjectID {
-  tag: u8,
-  method_id: u64,
+  pub tag: u8,
+  pub method_id: u64,
 }
 
 impl PacketData for JDWPTaggedObjectID {
@@ -576,102 +611,27 @@ impl_conv_pretty_io_value_struct!(JDWPTaggedObjectID, tag: u8, method_id: u64,);
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct JDWPIDLengthEqReferenceType {
-  id: u64,
+  pub id: u64,
 }
-impl PacketData for JDWPIDLengthEqReferenceType {
-  fn write_to<W: Write>(&self, w: &mut W) -> Result<(), std::io::Error> {
-    w.write_all(&self.id.to_be_bytes())
-  }
-  fn read_from<R: Read>(r: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
-    let mut id_bytes = vec![
-      0u8;
-      c.reference_type_id_size.ok_or(std::io::Error::new(
-        std::io::ErrorKind::InvalidData,
-        "Reference ID size not set in context",
-      ))? as usize
-    ];
-    r.read_exact(&mut id_bytes)?;
-    Ok(JDWPIDLengthEqReferenceType {
-      id: u64::from_be_bytes(id_bytes.try_into().unwrap()),
-    })
-  }
-}
-impl_conv_pretty_io_value_struct!(JDWPIDLengthEqReferenceType, id: u64,);
+derive_for_ids!(JDWPIDLengthEqReferenceType, id, reference_type_id_size);
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct JDWPIDLengthEqMethod {
-  id: u64,
+  pub id: u64,
 }
-
-impl PacketData for JDWPIDLengthEqMethod {
-  fn write_to<W: Write>(&self, w: &mut W) -> Result<(), std::io::Error> {
-    w.write_all(&self.id.to_be_bytes())
-  }
-  fn read_from<R: Read>(r: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
-    let mut id_bytes = vec![
-      0u8;
-      c.method_id_size.ok_or(std::io::Error::new(
-        std::io::ErrorKind::InvalidData,
-        "Method ID size not set in context",
-      ))? as usize
-    ];
-    r.read_exact(&mut id_bytes)?;
-    Ok(JDWPIDLengthEqMethod {
-      id: u64::from_be_bytes(id_bytes.try_into().unwrap()),
-    })
-  }
-}
-impl_conv_pretty_io_value_struct!(JDWPIDLengthEqMethod, id: u64,);
+derive_for_ids!(JDWPIDLengthEqMethod, id, method_id_size);
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct JDWPIDLengthEqField {
-  id: u64,
+  pub id: u64,
 }
-
-impl PacketData for JDWPIDLengthEqField {
-  fn write_to<W: Write>(&self, w: &mut W) -> Result<(), std::io::Error> {
-    w.write_all(&self.id.to_be_bytes())
-  }
-  fn read_from<R: Read>(r: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
-    let mut id_bytes = vec![
-      0u8;
-      c.field_id_size.ok_or(std::io::Error::new(
-        std::io::ErrorKind::InvalidData,
-        "Field ID size not set in context",
-      ))? as usize
-    ];
-    r.read_exact(&mut id_bytes)?;
-    Ok(JDWPIDLengthEqField {
-      id: u64::from_be_bytes(id_bytes.try_into().unwrap()),
-    })
-  }
-}
-impl_conv_pretty_io_value_struct!(JDWPIDLengthEqField, id: u64,);
+derive_for_ids!(JDWPIDLengthEqField, id, field_id_size);
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct JDWPIDLengthEqFrame {
-  id: u64,
+  pub id: u64,
 }
-
-impl PacketData for JDWPIDLengthEqFrame {
-  fn write_to<W: Write>(&self, w: &mut W) -> Result<(), std::io::Error> {
-    w.write_all(&self.id.to_be_bytes())
-  }
-  fn read_from<R: Read>(r: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
-    let mut id_bytes = vec![
-      0u8;
-      c.frame_id_size.ok_or(std::io::Error::new(
-        std::io::ErrorKind::InvalidData,
-        "Frame ID size not set in context",
-      ))? as usize
-    ];
-    r.read_exact(&mut id_bytes)?;
-    Ok(JDWPIDLengthEqFrame {
-      id: u64::from_be_bytes(id_bytes.try_into().unwrap()),
-    })
-  }
-}
-impl_conv_pretty_io_value_struct!(JDWPIDLengthEqFrame, id: u64,);
+derive_for_ids!(JDWPIDLengthEqFrame, id, frame_id_size);
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 #[repr(u8)]

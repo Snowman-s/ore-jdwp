@@ -108,7 +108,7 @@ impl_conv_pretty_io_value_struct!(
 #[derive(Debug, PartialEq, Clone)]
 pub struct VirtualMachineClassesBySignatureReceive {
   /* Number of reference types that follow. */
-  pub classes: (i32, Vec<VirtualMachineClassesBySignatureReceiveClasses>),
+  pub classes: Vec<VirtualMachineClassesBySignatureReceiveClasses>,
 }
 
 impl PacketData for VirtualMachineClassesBySignatureReceive {
@@ -118,14 +118,13 @@ impl PacketData for VirtualMachineClassesBySignatureReceive {
   }
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
-    let classes =
-      <(i32, Vec<VirtualMachineClassesBySignatureReceiveClasses>)>::read_from(reader, c)?;
+    let classes = Vec::<VirtualMachineClassesBySignatureReceiveClasses>::read_from(reader, c)?;
     Ok(VirtualMachineClassesBySignatureReceive { classes })
   }
 }
 impl_conv_pretty_io_value_struct!(
   VirtualMachineClassesBySignatureReceive,
-  classes: (i32, Vec<VirtualMachineClassesBySignatureReceiveClasses>),
+  classes: Vec<VirtualMachineClassesBySignatureReceiveClasses>,
 );
 #[derive(Debug, PartialEq, Clone)]
 pub struct VirtualMachineAllClassesReceiveClasses {
@@ -172,7 +171,7 @@ impl_conv_pretty_io_value_struct!(
 #[derive(Debug, PartialEq, Clone)]
 pub struct VirtualMachineAllClassesReceive {
   /* Number of reference types that follow. */
-  pub classes: (i32, Vec<VirtualMachineAllClassesReceiveClasses>),
+  pub classes: Vec<VirtualMachineAllClassesReceiveClasses>,
 }
 
 impl PacketData for VirtualMachineAllClassesReceive {
@@ -182,13 +181,13 @@ impl PacketData for VirtualMachineAllClassesReceive {
   }
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
-    let classes = <(i32, Vec<VirtualMachineAllClassesReceiveClasses>)>::read_from(reader, c)?;
+    let classes = Vec::<VirtualMachineAllClassesReceiveClasses>::read_from(reader, c)?;
     Ok(VirtualMachineAllClassesReceive { classes })
   }
 }
 impl_conv_pretty_io_value_struct!(
   VirtualMachineAllClassesReceive,
-  classes: (i32, Vec<VirtualMachineAllClassesReceiveClasses>),
+  classes: Vec<VirtualMachineAllClassesReceiveClasses>,
 );
 #[derive(Debug, PartialEq, Clone)]
 pub struct VirtualMachineAllThreadsReceiveThreads {
@@ -215,7 +214,7 @@ impl_conv_pretty_io_value_struct!(
 #[derive(Debug, PartialEq, Clone)]
 pub struct VirtualMachineAllThreadsReceive {
   /* Number of threads that follow. */
-  pub threads: (i32, Vec<VirtualMachineAllThreadsReceiveThreads>),
+  pub threads: Vec<VirtualMachineAllThreadsReceiveThreads>,
 }
 
 impl PacketData for VirtualMachineAllThreadsReceive {
@@ -225,13 +224,13 @@ impl PacketData for VirtualMachineAllThreadsReceive {
   }
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
-    let threads = <(i32, Vec<VirtualMachineAllThreadsReceiveThreads>)>::read_from(reader, c)?;
+    let threads = Vec::<VirtualMachineAllThreadsReceiveThreads>::read_from(reader, c)?;
     Ok(VirtualMachineAllThreadsReceive { threads })
   }
 }
 impl_conv_pretty_io_value_struct!(
   VirtualMachineAllThreadsReceive,
-  threads: (i32, Vec<VirtualMachineAllThreadsReceiveThreads>),
+  threads: Vec<VirtualMachineAllThreadsReceiveThreads>,
 );
 #[derive(Debug, PartialEq, Clone)]
 pub struct VirtualMachineTopLevelThreadGroupsReceiveGroups {
@@ -258,7 +257,7 @@ impl_conv_pretty_io_value_struct!(
 #[derive(Debug, PartialEq, Clone)]
 pub struct VirtualMachineTopLevelThreadGroupsReceive {
   /* Number of thread groups that follow. */
-  pub groups: (i32, Vec<VirtualMachineTopLevelThreadGroupsReceiveGroups>),
+  pub groups: Vec<VirtualMachineTopLevelThreadGroupsReceiveGroups>,
 }
 
 impl PacketData for VirtualMachineTopLevelThreadGroupsReceive {
@@ -268,14 +267,13 @@ impl PacketData for VirtualMachineTopLevelThreadGroupsReceive {
   }
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
-    let groups =
-      <(i32, Vec<VirtualMachineTopLevelThreadGroupsReceiveGroups>)>::read_from(reader, c)?;
+    let groups = Vec::<VirtualMachineTopLevelThreadGroupsReceiveGroups>::read_from(reader, c)?;
     Ok(VirtualMachineTopLevelThreadGroupsReceive { groups })
   }
 }
 impl_conv_pretty_io_value_struct!(
   VirtualMachineTopLevelThreadGroupsReceive,
-  groups: (i32, Vec<VirtualMachineTopLevelThreadGroupsReceiveGroups>),
+  groups: Vec<VirtualMachineTopLevelThreadGroupsReceiveGroups>,
 );
 #[derive(Debug, PartialEq, Clone)]
 pub struct VirtualMachineIDSizesReceive {
@@ -495,9 +493,9 @@ pub struct VirtualMachineClassPathsReceive {
   /* Base directory used to resolve relative paths in either of the following lists. */
   pub base_dir: JDWPString,
   /* Number of paths in classpath. */
-  pub classpaths: (i32, Vec<VirtualMachineClassPathsReceiveClasspaths>),
+  pub classpaths: Vec<VirtualMachineClassPathsReceiveClasspaths>,
   /* Number of paths in bootclasspath. */
-  pub bootclasspaths: (i32, Vec<VirtualMachineClassPathsReceiveBootclasspaths>),
+  pub bootclasspaths: Vec<VirtualMachineClassPathsReceiveBootclasspaths>,
 }
 
 impl PacketData for VirtualMachineClassPathsReceive {
@@ -510,9 +508,9 @@ impl PacketData for VirtualMachineClassPathsReceive {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let base_dir = JDWPString::read_from(reader, c)?;
-    let classpaths = <(i32, Vec<VirtualMachineClassPathsReceiveClasspaths>)>::read_from(reader, c)?;
+    let classpaths = Vec::<VirtualMachineClassPathsReceiveClasspaths>::read_from(reader, c)?;
     let bootclasspaths =
-      <(i32, Vec<VirtualMachineClassPathsReceiveBootclasspaths>)>::read_from(reader, c)?;
+      Vec::<VirtualMachineClassPathsReceiveBootclasspaths>::read_from(reader, c)?;
     Ok(VirtualMachineClassPathsReceive {
       base_dir,
       classpaths,
@@ -523,8 +521,8 @@ impl PacketData for VirtualMachineClassPathsReceive {
 impl_conv_pretty_io_value_struct!(
   VirtualMachineClassPathsReceive,
   base_dir: JDWPString,
-  classpaths: (i32, Vec<VirtualMachineClassPathsReceiveClasspaths>),
-  bootclasspaths: (i32, Vec<VirtualMachineClassPathsReceiveBootclasspaths>),
+  classpaths: Vec<VirtualMachineClassPathsReceiveClasspaths>,
+  bootclasspaths: Vec<VirtualMachineClassPathsReceiveBootclasspaths>,
 );
 #[derive(Debug, PartialEq, Clone)]
 pub struct VirtualMachineDisposeObjectsSendRequests {
@@ -556,7 +554,7 @@ impl_conv_pretty_io_value_struct!(
 #[derive(Debug, PartialEq, Clone)]
 pub struct VirtualMachineDisposeObjectsSend {
   /* Number of object dispose requests that follow */
-  pub requests: (i32, Vec<VirtualMachineDisposeObjectsSendRequests>),
+  pub requests: Vec<VirtualMachineDisposeObjectsSendRequests>,
 }
 
 impl PacketData for VirtualMachineDisposeObjectsSend {
@@ -566,13 +564,13 @@ impl PacketData for VirtualMachineDisposeObjectsSend {
   }
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
-    let requests = <(i32, Vec<VirtualMachineDisposeObjectsSendRequests>)>::read_from(reader, c)?;
+    let requests = Vec::<VirtualMachineDisposeObjectsSendRequests>::read_from(reader, c)?;
     Ok(VirtualMachineDisposeObjectsSend { requests })
   }
 }
 impl_conv_pretty_io_value_struct!(
   VirtualMachineDisposeObjectsSend,
-  requests: (i32, Vec<VirtualMachineDisposeObjectsSendRequests>),
+  requests: Vec<VirtualMachineDisposeObjectsSendRequests>,
 );
 #[derive(Debug, PartialEq, Clone)]
 pub struct VirtualMachineCapabilitiesNewReceive {
@@ -810,7 +808,7 @@ pub struct VirtualMachineRedefineClassesSendClasses {
   /* The reference type. */
   pub ref_type: JDWPIDLengthEqReferenceType,
   /* Number of bytes defining class (below) */
-  pub classfile: (i32, Vec<VirtualMachineRedefineClassesSendClassesClassfile>),
+  pub classfile: Vec<VirtualMachineRedefineClassesSendClassesClassfile>,
 }
 
 impl PacketData for VirtualMachineRedefineClassesSendClasses {
@@ -822,8 +820,7 @@ impl PacketData for VirtualMachineRedefineClassesSendClasses {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let ref_type = JDWPIDLengthEqReferenceType::read_from(reader, c)?;
-    let classfile =
-      <(i32, Vec<VirtualMachineRedefineClassesSendClassesClassfile>)>::read_from(reader, c)?;
+    let classfile = Vec::<VirtualMachineRedefineClassesSendClassesClassfile>::read_from(reader, c)?;
     Ok(VirtualMachineRedefineClassesSendClasses {
       ref_type,
       classfile,
@@ -833,13 +830,13 @@ impl PacketData for VirtualMachineRedefineClassesSendClasses {
 impl_conv_pretty_io_value_struct!(
   VirtualMachineRedefineClassesSendClasses,
   ref_type: JDWPIDLengthEqReferenceType,
-  classfile: (i32, Vec<VirtualMachineRedefineClassesSendClassesClassfile>),
+  classfile: Vec<VirtualMachineRedefineClassesSendClassesClassfile>,
 );
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct VirtualMachineRedefineClassesSend {
   /* Number of reference types that follow. */
-  pub classes: (i32, Vec<VirtualMachineRedefineClassesSendClasses>),
+  pub classes: Vec<VirtualMachineRedefineClassesSendClasses>,
 }
 
 impl PacketData for VirtualMachineRedefineClassesSend {
@@ -849,13 +846,13 @@ impl PacketData for VirtualMachineRedefineClassesSend {
   }
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
-    let classes = <(i32, Vec<VirtualMachineRedefineClassesSendClasses>)>::read_from(reader, c)?;
+    let classes = Vec::<VirtualMachineRedefineClassesSendClasses>::read_from(reader, c)?;
     Ok(VirtualMachineRedefineClassesSend { classes })
   }
 }
 impl_conv_pretty_io_value_struct!(
   VirtualMachineRedefineClassesSend,
-  classes: (i32, Vec<VirtualMachineRedefineClassesSendClasses>),
+  classes: Vec<VirtualMachineRedefineClassesSendClasses>,
 );
 #[derive(Debug, PartialEq, Clone)]
 pub struct VirtualMachineSetDefaultStratumSend {
@@ -929,7 +926,7 @@ impl_conv_pretty_io_value_struct!(
 #[derive(Debug, PartialEq, Clone)]
 pub struct VirtualMachineAllClassesWithGenericReceive {
   /* Number of reference types that follow. */
-  pub classes: (i32, Vec<VirtualMachineAllClassesWithGenericReceiveClasses>),
+  pub classes: Vec<VirtualMachineAllClassesWithGenericReceiveClasses>,
 }
 
 impl PacketData for VirtualMachineAllClassesWithGenericReceive {
@@ -939,14 +936,13 @@ impl PacketData for VirtualMachineAllClassesWithGenericReceive {
   }
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
-    let classes =
-      <(i32, Vec<VirtualMachineAllClassesWithGenericReceiveClasses>)>::read_from(reader, c)?;
+    let classes = Vec::<VirtualMachineAllClassesWithGenericReceiveClasses>::read_from(reader, c)?;
     Ok(VirtualMachineAllClassesWithGenericReceive { classes })
   }
 }
 impl_conv_pretty_io_value_struct!(
   VirtualMachineAllClassesWithGenericReceive,
-  classes: (i32, Vec<VirtualMachineAllClassesWithGenericReceiveClasses>),
+  classes: Vec<VirtualMachineAllClassesWithGenericReceiveClasses>,
 );
 #[derive(Debug, PartialEq, Clone)]
 pub struct VirtualMachineInstanceCountsSendRefTypesCount {
@@ -973,7 +969,7 @@ impl_conv_pretty_io_value_struct!(
 #[derive(Debug, PartialEq, Clone)]
 pub struct VirtualMachineInstanceCountsSend {
   /* Number of reference types that follow.    Must be non-negative. */
-  pub ref_types_count: (i32, Vec<VirtualMachineInstanceCountsSendRefTypesCount>),
+  pub ref_types_count: Vec<VirtualMachineInstanceCountsSendRefTypesCount>,
 }
 
 impl PacketData for VirtualMachineInstanceCountsSend {
@@ -984,13 +980,13 @@ impl PacketData for VirtualMachineInstanceCountsSend {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let ref_types_count =
-      <(i32, Vec<VirtualMachineInstanceCountsSendRefTypesCount>)>::read_from(reader, c)?;
+      Vec::<VirtualMachineInstanceCountsSendRefTypesCount>::read_from(reader, c)?;
     Ok(VirtualMachineInstanceCountsSend { ref_types_count })
   }
 }
 impl_conv_pretty_io_value_struct!(
   VirtualMachineInstanceCountsSend,
-  ref_types_count: (i32, Vec<VirtualMachineInstanceCountsSendRefTypesCount>),
+  ref_types_count: Vec<VirtualMachineInstanceCountsSendRefTypesCount>,
 );
 #[derive(Debug, PartialEq, Clone)]
 pub struct VirtualMachineInstanceCountsReceiveCounts {
@@ -1017,7 +1013,7 @@ impl_conv_pretty_io_value_struct!(
 #[derive(Debug, PartialEq, Clone)]
 pub struct VirtualMachineInstanceCountsReceive {
   /* The number of counts that follow. */
-  pub counts: (i32, Vec<VirtualMachineInstanceCountsReceiveCounts>),
+  pub counts: Vec<VirtualMachineInstanceCountsReceiveCounts>,
 }
 
 impl PacketData for VirtualMachineInstanceCountsReceive {
@@ -1027,13 +1023,13 @@ impl PacketData for VirtualMachineInstanceCountsReceive {
   }
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
-    let counts = <(i32, Vec<VirtualMachineInstanceCountsReceiveCounts>)>::read_from(reader, c)?;
+    let counts = Vec::<VirtualMachineInstanceCountsReceiveCounts>::read_from(reader, c)?;
     Ok(VirtualMachineInstanceCountsReceive { counts })
   }
 }
 impl_conv_pretty_io_value_struct!(
   VirtualMachineInstanceCountsReceive,
-  counts: (i32, Vec<VirtualMachineInstanceCountsReceiveCounts>),
+  counts: Vec<VirtualMachineInstanceCountsReceiveCounts>,
 );
 #[derive(Debug, PartialEq, Clone)]
 pub struct ReferenceTypeSignatureSend {
@@ -1227,7 +1223,7 @@ impl_conv_pretty_io_value_struct!(
 #[derive(Debug, PartialEq, Clone)]
 pub struct ReferenceTypeFieldsReceive {
   /* Number of declared fields. */
-  pub declared: (i32, Vec<ReferenceTypeFieldsReceiveDeclared>),
+  pub declared: Vec<ReferenceTypeFieldsReceiveDeclared>,
 }
 
 impl PacketData for ReferenceTypeFieldsReceive {
@@ -1237,13 +1233,13 @@ impl PacketData for ReferenceTypeFieldsReceive {
   }
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
-    let declared = <(i32, Vec<ReferenceTypeFieldsReceiveDeclared>)>::read_from(reader, c)?;
+    let declared = Vec::<ReferenceTypeFieldsReceiveDeclared>::read_from(reader, c)?;
     Ok(ReferenceTypeFieldsReceive { declared })
   }
 }
 impl_conv_pretty_io_value_struct!(
   ReferenceTypeFieldsReceive,
-  declared: (i32, Vec<ReferenceTypeFieldsReceiveDeclared>),
+  declared: Vec<ReferenceTypeFieldsReceiveDeclared>,
 );
 #[derive(Debug, PartialEq, Clone)]
 pub struct ReferenceTypeMethodsSend {
@@ -1311,7 +1307,7 @@ impl_conv_pretty_io_value_struct!(
 #[derive(Debug, PartialEq, Clone)]
 pub struct ReferenceTypeMethodsReceive {
   /* Number of declared methods. */
-  pub declared: (i32, Vec<ReferenceTypeMethodsReceiveDeclared>),
+  pub declared: Vec<ReferenceTypeMethodsReceiveDeclared>,
 }
 
 impl PacketData for ReferenceTypeMethodsReceive {
@@ -1321,13 +1317,13 @@ impl PacketData for ReferenceTypeMethodsReceive {
   }
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
-    let declared = <(i32, Vec<ReferenceTypeMethodsReceiveDeclared>)>::read_from(reader, c)?;
+    let declared = Vec::<ReferenceTypeMethodsReceiveDeclared>::read_from(reader, c)?;
     Ok(ReferenceTypeMethodsReceive { declared })
   }
 }
 impl_conv_pretty_io_value_struct!(
   ReferenceTypeMethodsReceive,
-  declared: (i32, Vec<ReferenceTypeMethodsReceiveDeclared>),
+  declared: Vec<ReferenceTypeMethodsReceiveDeclared>,
 );
 #[derive(Debug, PartialEq, Clone)]
 pub struct ReferenceTypeGetValuesSendFields {
@@ -1356,7 +1352,7 @@ pub struct ReferenceTypeGetValuesSend {
   /* The reference type ID. */
   pub ref_type: JDWPIDLengthEqReferenceType,
   /* The number of values to get */
-  pub fields: (i32, Vec<ReferenceTypeGetValuesSendFields>),
+  pub fields: Vec<ReferenceTypeGetValuesSendFields>,
 }
 
 impl PacketData for ReferenceTypeGetValuesSend {
@@ -1368,14 +1364,14 @@ impl PacketData for ReferenceTypeGetValuesSend {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let ref_type = JDWPIDLengthEqReferenceType::read_from(reader, c)?;
-    let fields = <(i32, Vec<ReferenceTypeGetValuesSendFields>)>::read_from(reader, c)?;
+    let fields = Vec::<ReferenceTypeGetValuesSendFields>::read_from(reader, c)?;
     Ok(ReferenceTypeGetValuesSend { ref_type, fields })
   }
 }
 impl_conv_pretty_io_value_struct!(
   ReferenceTypeGetValuesSend,
   ref_type: JDWPIDLengthEqReferenceType,
-  fields: (i32, Vec<ReferenceTypeGetValuesSendFields>),
+  fields: Vec<ReferenceTypeGetValuesSendFields>,
 );
 #[derive(Debug, PartialEq, Clone)]
 pub struct ReferenceTypeGetValuesReceiveValues {
@@ -1402,7 +1398,7 @@ impl_conv_pretty_io_value_struct!(
 #[derive(Debug, PartialEq, Clone)]
 pub struct ReferenceTypeGetValuesReceive {
   /* The number of values returned, always equal to fields, the number of values to get. */
-  pub values: (i32, Vec<ReferenceTypeGetValuesReceiveValues>),
+  pub values: Vec<ReferenceTypeGetValuesReceiveValues>,
 }
 
 impl PacketData for ReferenceTypeGetValuesReceive {
@@ -1412,13 +1408,13 @@ impl PacketData for ReferenceTypeGetValuesReceive {
   }
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
-    let values = <(i32, Vec<ReferenceTypeGetValuesReceiveValues>)>::read_from(reader, c)?;
+    let values = Vec::<ReferenceTypeGetValuesReceiveValues>::read_from(reader, c)?;
     Ok(ReferenceTypeGetValuesReceive { values })
   }
 }
 impl_conv_pretty_io_value_struct!(
   ReferenceTypeGetValuesReceive,
-  values: (i32, Vec<ReferenceTypeGetValuesReceiveValues>),
+  values: Vec<ReferenceTypeGetValuesReceiveValues>,
 );
 #[derive(Debug, PartialEq, Clone)]
 pub struct ReferenceTypeSourceFileSend {
@@ -1516,7 +1512,7 @@ impl_conv_pretty_io_value_struct!(
 #[derive(Debug, PartialEq, Clone)]
 pub struct ReferenceTypeNestedTypesReceive {
   /* The number of nested classes and interfaces */
-  pub classes: (i32, Vec<ReferenceTypeNestedTypesReceiveClasses>),
+  pub classes: Vec<ReferenceTypeNestedTypesReceiveClasses>,
 }
 
 impl PacketData for ReferenceTypeNestedTypesReceive {
@@ -1526,13 +1522,13 @@ impl PacketData for ReferenceTypeNestedTypesReceive {
   }
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
-    let classes = <(i32, Vec<ReferenceTypeNestedTypesReceiveClasses>)>::read_from(reader, c)?;
+    let classes = Vec::<ReferenceTypeNestedTypesReceiveClasses>::read_from(reader, c)?;
     Ok(ReferenceTypeNestedTypesReceive { classes })
   }
 }
 impl_conv_pretty_io_value_struct!(
   ReferenceTypeNestedTypesReceive,
-  classes: (i32, Vec<ReferenceTypeNestedTypesReceiveClasses>),
+  classes: Vec<ReferenceTypeNestedTypesReceiveClasses>,
 );
 #[derive(Debug, PartialEq, Clone)]
 pub struct ReferenceTypeStatusSend {
@@ -1622,7 +1618,7 @@ impl_conv_pretty_io_value_struct!(
 #[derive(Debug, PartialEq, Clone)]
 pub struct ReferenceTypeInterfacesReceive {
   /* The number of implemented interfaces */
-  pub interfaces: (i32, Vec<ReferenceTypeInterfacesReceiveInterfaces>),
+  pub interfaces: Vec<ReferenceTypeInterfacesReceiveInterfaces>,
 }
 
 impl PacketData for ReferenceTypeInterfacesReceive {
@@ -1632,13 +1628,13 @@ impl PacketData for ReferenceTypeInterfacesReceive {
   }
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
-    let interfaces = <(i32, Vec<ReferenceTypeInterfacesReceiveInterfaces>)>::read_from(reader, c)?;
+    let interfaces = Vec::<ReferenceTypeInterfacesReceiveInterfaces>::read_from(reader, c)?;
     Ok(ReferenceTypeInterfacesReceive { interfaces })
   }
 }
 impl_conv_pretty_io_value_struct!(
   ReferenceTypeInterfacesReceive,
-  interfaces: (i32, Vec<ReferenceTypeInterfacesReceiveInterfaces>),
+  interfaces: Vec<ReferenceTypeInterfacesReceiveInterfaces>,
 );
 #[derive(Debug, PartialEq, Clone)]
 pub struct ReferenceTypeClassObjectSend {
@@ -1846,7 +1842,7 @@ impl_conv_pretty_io_value_struct!(
 #[derive(Debug, PartialEq, Clone)]
 pub struct ReferenceTypeFieldsWithGenericReceive {
   /* Number of declared fields. */
-  pub declared: (i32, Vec<ReferenceTypeFieldsWithGenericReceiveDeclared>),
+  pub declared: Vec<ReferenceTypeFieldsWithGenericReceiveDeclared>,
 }
 
 impl PacketData for ReferenceTypeFieldsWithGenericReceive {
@@ -1856,14 +1852,13 @@ impl PacketData for ReferenceTypeFieldsWithGenericReceive {
   }
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
-    let declared =
-      <(i32, Vec<ReferenceTypeFieldsWithGenericReceiveDeclared>)>::read_from(reader, c)?;
+    let declared = Vec::<ReferenceTypeFieldsWithGenericReceiveDeclared>::read_from(reader, c)?;
     Ok(ReferenceTypeFieldsWithGenericReceive { declared })
   }
 }
 impl_conv_pretty_io_value_struct!(
   ReferenceTypeFieldsWithGenericReceive,
-  declared: (i32, Vec<ReferenceTypeFieldsWithGenericReceiveDeclared>),
+  declared: Vec<ReferenceTypeFieldsWithGenericReceiveDeclared>,
 );
 #[derive(Debug, PartialEq, Clone)]
 pub struct ReferenceTypeMethodsWithGenericSend {
@@ -1937,7 +1932,7 @@ impl_conv_pretty_io_value_struct!(
 #[derive(Debug, PartialEq, Clone)]
 pub struct ReferenceTypeMethodsWithGenericReceive {
   /* Number of declared methods. */
-  pub declared: (i32, Vec<ReferenceTypeMethodsWithGenericReceiveDeclared>),
+  pub declared: Vec<ReferenceTypeMethodsWithGenericReceiveDeclared>,
 }
 
 impl PacketData for ReferenceTypeMethodsWithGenericReceive {
@@ -1947,14 +1942,13 @@ impl PacketData for ReferenceTypeMethodsWithGenericReceive {
   }
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
-    let declared =
-      <(i32, Vec<ReferenceTypeMethodsWithGenericReceiveDeclared>)>::read_from(reader, c)?;
+    let declared = Vec::<ReferenceTypeMethodsWithGenericReceiveDeclared>::read_from(reader, c)?;
     Ok(ReferenceTypeMethodsWithGenericReceive { declared })
   }
 }
 impl_conv_pretty_io_value_struct!(
   ReferenceTypeMethodsWithGenericReceive,
-  declared: (i32, Vec<ReferenceTypeMethodsWithGenericReceiveDeclared>),
+  declared: Vec<ReferenceTypeMethodsWithGenericReceiveDeclared>,
 );
 #[derive(Debug, PartialEq, Clone)]
 pub struct ReferenceTypeInstancesSend {
@@ -2010,7 +2004,7 @@ impl_conv_pretty_io_value_struct!(
 #[derive(Debug, PartialEq, Clone)]
 pub struct ReferenceTypeInstancesReceive {
   /* The number of instances that follow. */
-  pub instances: (i32, Vec<ReferenceTypeInstancesReceiveInstances>),
+  pub instances: Vec<ReferenceTypeInstancesReceiveInstances>,
 }
 
 impl PacketData for ReferenceTypeInstancesReceive {
@@ -2020,13 +2014,13 @@ impl PacketData for ReferenceTypeInstancesReceive {
   }
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
-    let instances = <(i32, Vec<ReferenceTypeInstancesReceiveInstances>)>::read_from(reader, c)?;
+    let instances = Vec::<ReferenceTypeInstancesReceiveInstances>::read_from(reader, c)?;
     Ok(ReferenceTypeInstancesReceive { instances })
   }
 }
 impl_conv_pretty_io_value_struct!(
   ReferenceTypeInstancesReceive,
-  instances: (i32, Vec<ReferenceTypeInstancesReceiveInstances>),
+  instances: Vec<ReferenceTypeInstancesReceiveInstances>,
 );
 #[derive(Debug, PartialEq, Clone)]
 pub struct ReferenceTypeClassFileVersionSend {
@@ -2126,7 +2120,7 @@ pub struct ReferenceTypeConstantPoolReceive {
   /* Total number of constant pool entries plus one. This corresponds to the constant_pool_count item of the Class File Format in The Java™ Virtual Machine Specification. */
   pub count: i32,
   /*  */
-  pub bytes: (i32, Vec<ReferenceTypeConstantPoolReceiveBytes>),
+  pub bytes: Vec<ReferenceTypeConstantPoolReceiveBytes>,
 }
 
 impl PacketData for ReferenceTypeConstantPoolReceive {
@@ -2138,14 +2132,14 @@ impl PacketData for ReferenceTypeConstantPoolReceive {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let count = i32::read_from(reader, c)?;
-    let bytes = <(i32, Vec<ReferenceTypeConstantPoolReceiveBytes>)>::read_from(reader, c)?;
+    let bytes = Vec::<ReferenceTypeConstantPoolReceiveBytes>::read_from(reader, c)?;
     Ok(ReferenceTypeConstantPoolReceive { count, bytes })
   }
 }
 impl_conv_pretty_io_value_struct!(
   ReferenceTypeConstantPoolReceive,
   count: i32,
-  bytes: (i32, Vec<ReferenceTypeConstantPoolReceiveBytes>),
+  bytes: Vec<ReferenceTypeConstantPoolReceiveBytes>,
 );
 #[derive(Debug, PartialEq, Clone)]
 pub struct ClassTypeSuperclassSend {
@@ -2221,7 +2215,7 @@ pub struct ClassTypeSetValuesSend {
   /* The class type ID. */
   pub clazz: JDWPIDLengthEqReferenceType,
   /* The number of fields to set. */
-  pub values: (i32, Vec<ClassTypeSetValuesSendValues>),
+  pub values: Vec<ClassTypeSetValuesSendValues>,
 }
 
 impl PacketData for ClassTypeSetValuesSend {
@@ -2233,14 +2227,14 @@ impl PacketData for ClassTypeSetValuesSend {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let clazz = JDWPIDLengthEqReferenceType::read_from(reader, c)?;
-    let values = <(i32, Vec<ClassTypeSetValuesSendValues>)>::read_from(reader, c)?;
+    let values = Vec::<ClassTypeSetValuesSendValues>::read_from(reader, c)?;
     Ok(ClassTypeSetValuesSend { clazz, values })
   }
 }
 impl_conv_pretty_io_value_struct!(
   ClassTypeSetValuesSend,
   clazz: JDWPIDLengthEqReferenceType,
-  values: (i32, Vec<ClassTypeSetValuesSendValues>),
+  values: Vec<ClassTypeSetValuesSendValues>,
 );
 #[derive(Debug, PartialEq, Clone)]
 pub struct ClassTypeInvokeMethodSendArguments {
@@ -2273,7 +2267,7 @@ pub struct ClassTypeInvokeMethodSend {
   /* The method to invoke. */
   pub method_id: JDWPIDLengthEqMethod,
   /*  */
-  pub arguments: (i32, Vec<ClassTypeInvokeMethodSendArguments>),
+  pub arguments: Vec<ClassTypeInvokeMethodSendArguments>,
   /* Invocation options */
   pub options: i32,
 }
@@ -2292,7 +2286,7 @@ impl PacketData for ClassTypeInvokeMethodSend {
     let clazz = JDWPIDLengthEqReferenceType::read_from(reader, c)?;
     let thread = JDWPIDLengthEqObject::read_from(reader, c)?;
     let method_id = JDWPIDLengthEqMethod::read_from(reader, c)?;
-    let arguments = <(i32, Vec<ClassTypeInvokeMethodSendArguments>)>::read_from(reader, c)?;
+    let arguments = Vec::<ClassTypeInvokeMethodSendArguments>::read_from(reader, c)?;
     let options = i32::read_from(reader, c)?;
     Ok(ClassTypeInvokeMethodSend {
       clazz,
@@ -2308,7 +2302,7 @@ impl_conv_pretty_io_value_struct!(
   clazz: JDWPIDLengthEqReferenceType,
   thread: JDWPIDLengthEqObject,
   method_id: JDWPIDLengthEqMethod,
-  arguments: (i32, Vec<ClassTypeInvokeMethodSendArguments>),
+  arguments: Vec<ClassTypeInvokeMethodSendArguments>,
   options: i32,
 );
 #[derive(Debug, PartialEq, Clone)]
@@ -2371,7 +2365,7 @@ pub struct ClassTypeNewInstanceSend {
   /* The constructor to invoke. */
   pub method_id: JDWPIDLengthEqMethod,
   /*  */
-  pub arguments: (i32, Vec<ClassTypeNewInstanceSendArguments>),
+  pub arguments: Vec<ClassTypeNewInstanceSendArguments>,
   /* Constructor invocation options */
   pub options: i32,
 }
@@ -2390,7 +2384,7 @@ impl PacketData for ClassTypeNewInstanceSend {
     let clazz = JDWPIDLengthEqReferenceType::read_from(reader, c)?;
     let thread = JDWPIDLengthEqObject::read_from(reader, c)?;
     let method_id = JDWPIDLengthEqMethod::read_from(reader, c)?;
-    let arguments = <(i32, Vec<ClassTypeNewInstanceSendArguments>)>::read_from(reader, c)?;
+    let arguments = Vec::<ClassTypeNewInstanceSendArguments>::read_from(reader, c)?;
     let options = i32::read_from(reader, c)?;
     Ok(ClassTypeNewInstanceSend {
       clazz,
@@ -2406,7 +2400,7 @@ impl_conv_pretty_io_value_struct!(
   clazz: JDWPIDLengthEqReferenceType,
   thread: JDWPIDLengthEqObject,
   method_id: JDWPIDLengthEqMethod,
-  arguments: (i32, Vec<ClassTypeNewInstanceSendArguments>),
+  arguments: Vec<ClassTypeNewInstanceSendArguments>,
   options: i32,
 );
 #[derive(Debug, PartialEq, Clone)]
@@ -2516,7 +2510,7 @@ pub struct InterfaceTypeInvokeMethodSend {
   /* The method to invoke. */
   pub method_id: JDWPIDLengthEqMethod,
   /*  */
-  pub arguments: (i32, Vec<InterfaceTypeInvokeMethodSendArguments>),
+  pub arguments: Vec<InterfaceTypeInvokeMethodSendArguments>,
   /* Invocation options */
   pub options: i32,
 }
@@ -2535,7 +2529,7 @@ impl PacketData for InterfaceTypeInvokeMethodSend {
     let clazz = JDWPIDLengthEqReferenceType::read_from(reader, c)?;
     let thread = JDWPIDLengthEqObject::read_from(reader, c)?;
     let method_id = JDWPIDLengthEqMethod::read_from(reader, c)?;
-    let arguments = <(i32, Vec<InterfaceTypeInvokeMethodSendArguments>)>::read_from(reader, c)?;
+    let arguments = Vec::<InterfaceTypeInvokeMethodSendArguments>::read_from(reader, c)?;
     let options = i32::read_from(reader, c)?;
     Ok(InterfaceTypeInvokeMethodSend {
       clazz,
@@ -2551,7 +2545,7 @@ impl_conv_pretty_io_value_struct!(
   clazz: JDWPIDLengthEqReferenceType,
   thread: JDWPIDLengthEqObject,
   method_id: JDWPIDLengthEqMethod,
-  arguments: (i32, Vec<InterfaceTypeInvokeMethodSendArguments>),
+  arguments: Vec<InterfaceTypeInvokeMethodSendArguments>,
   options: i32,
 );
 #[derive(Debug, PartialEq, Clone)]
@@ -2649,7 +2643,7 @@ pub struct MethodLineTableReceive {
   /* Highest valid code index for the method, >=0, or -1 if the method is native */
   pub end: i64,
   /* The number of entries in the line table for this method. */
-  pub lines: (i32, Vec<MethodLineTableReceiveLines>),
+  pub lines: Vec<MethodLineTableReceiveLines>,
 }
 
 impl PacketData for MethodLineTableReceive {
@@ -2663,7 +2657,7 @@ impl PacketData for MethodLineTableReceive {
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let start = i64::read_from(reader, c)?;
     let end = i64::read_from(reader, c)?;
-    let lines = <(i32, Vec<MethodLineTableReceiveLines>)>::read_from(reader, c)?;
+    let lines = Vec::<MethodLineTableReceiveLines>::read_from(reader, c)?;
     Ok(MethodLineTableReceive { start, end, lines })
   }
 }
@@ -2671,7 +2665,7 @@ impl_conv_pretty_io_value_struct!(
   MethodLineTableReceive,
   start: i64,
   end: i64,
-  lines: (i32, Vec<MethodLineTableReceiveLines>),
+  lines: Vec<MethodLineTableReceiveLines>,
 );
 #[derive(Debug, PartialEq, Clone)]
 pub struct MethodVariableTableSend {
@@ -2755,7 +2749,7 @@ pub struct MethodVariableTableReceive {
   /* The number of words in the frame used by arguments. Eight-byte arguments use two words; all others use one. */
   pub arg_cnt: i32,
   /* The number of variables. */
-  pub slots: (i32, Vec<MethodVariableTableReceiveSlots>),
+  pub slots: Vec<MethodVariableTableReceiveSlots>,
 }
 
 impl PacketData for MethodVariableTableReceive {
@@ -2767,14 +2761,14 @@ impl PacketData for MethodVariableTableReceive {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let arg_cnt = i32::read_from(reader, c)?;
-    let slots = <(i32, Vec<MethodVariableTableReceiveSlots>)>::read_from(reader, c)?;
+    let slots = Vec::<MethodVariableTableReceiveSlots>::read_from(reader, c)?;
     Ok(MethodVariableTableReceive { arg_cnt, slots })
   }
 }
 impl_conv_pretty_io_value_struct!(
   MethodVariableTableReceive,
   arg_cnt: i32,
-  slots: (i32, Vec<MethodVariableTableReceiveSlots>),
+  slots: Vec<MethodVariableTableReceiveSlots>,
 );
 #[derive(Debug, PartialEq, Clone)]
 pub struct MethodBytecodesSend {
@@ -2830,7 +2824,7 @@ impl_conv_pretty_io_value_struct!(
 #[derive(Debug, PartialEq, Clone)]
 pub struct MethodBytecodesReceive {
   /*  */
-  pub bytes: (i32, Vec<MethodBytecodesReceiveBytes>),
+  pub bytes: Vec<MethodBytecodesReceiveBytes>,
 }
 
 impl PacketData for MethodBytecodesReceive {
@@ -2840,13 +2834,13 @@ impl PacketData for MethodBytecodesReceive {
   }
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
-    let bytes = <(i32, Vec<MethodBytecodesReceiveBytes>)>::read_from(reader, c)?;
+    let bytes = Vec::<MethodBytecodesReceiveBytes>::read_from(reader, c)?;
     Ok(MethodBytecodesReceive { bytes })
   }
 }
 impl_conv_pretty_io_value_struct!(
   MethodBytecodesReceive,
-  bytes: (i32, Vec<MethodBytecodesReceiveBytes>),
+  bytes: Vec<MethodBytecodesReceiveBytes>,
 );
 #[derive(Debug, PartialEq, Clone)]
 pub struct MethodIsObsoleteSend {
@@ -2986,7 +2980,7 @@ pub struct MethodVariableTableWithGenericReceive {
   /* The number of words in the frame used by arguments. Eight-byte arguments use two words; all others use one. */
   pub arg_cnt: i32,
   /* The number of variables. */
-  pub slots: (i32, Vec<MethodVariableTableWithGenericReceiveSlots>),
+  pub slots: Vec<MethodVariableTableWithGenericReceiveSlots>,
 }
 
 impl PacketData for MethodVariableTableWithGenericReceive {
@@ -2998,14 +2992,14 @@ impl PacketData for MethodVariableTableWithGenericReceive {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let arg_cnt = i32::read_from(reader, c)?;
-    let slots = <(i32, Vec<MethodVariableTableWithGenericReceiveSlots>)>::read_from(reader, c)?;
+    let slots = Vec::<MethodVariableTableWithGenericReceiveSlots>::read_from(reader, c)?;
     Ok(MethodVariableTableWithGenericReceive { arg_cnt, slots })
   }
 }
 impl_conv_pretty_io_value_struct!(
   MethodVariableTableWithGenericReceive,
   arg_cnt: i32,
-  slots: (i32, Vec<MethodVariableTableWithGenericReceiveSlots>),
+  slots: Vec<MethodVariableTableWithGenericReceiveSlots>,
 );
 #[derive(Debug, PartialEq, Clone)]
 pub struct ObjectReferenceReferenceTypeSend {
@@ -3084,7 +3078,7 @@ pub struct ObjectReferenceGetValuesSend {
   /* The object ID */
   pub object: JDWPIDLengthEqObject,
   /* The number of values to get */
-  pub fields: (i32, Vec<ObjectReferenceGetValuesSendFields>),
+  pub fields: Vec<ObjectReferenceGetValuesSendFields>,
 }
 
 impl PacketData for ObjectReferenceGetValuesSend {
@@ -3096,14 +3090,14 @@ impl PacketData for ObjectReferenceGetValuesSend {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let object = JDWPIDLengthEqObject::read_from(reader, c)?;
-    let fields = <(i32, Vec<ObjectReferenceGetValuesSendFields>)>::read_from(reader, c)?;
+    let fields = Vec::<ObjectReferenceGetValuesSendFields>::read_from(reader, c)?;
     Ok(ObjectReferenceGetValuesSend { object, fields })
   }
 }
 impl_conv_pretty_io_value_struct!(
   ObjectReferenceGetValuesSend,
   object: JDWPIDLengthEqObject,
-  fields: (i32, Vec<ObjectReferenceGetValuesSendFields>),
+  fields: Vec<ObjectReferenceGetValuesSendFields>,
 );
 #[derive(Debug, PartialEq, Clone)]
 pub struct ObjectReferenceGetValuesReceiveValues {
@@ -3130,7 +3124,7 @@ impl_conv_pretty_io_value_struct!(
 #[derive(Debug, PartialEq, Clone)]
 pub struct ObjectReferenceGetValuesReceive {
   /* The number of values returned, always equal to 'fields', the number of values to get. Field values are ordered in the reply in the same order as corresponding fieldIDs in the command. */
-  pub values: (i32, Vec<ObjectReferenceGetValuesReceiveValues>),
+  pub values: Vec<ObjectReferenceGetValuesReceiveValues>,
 }
 
 impl PacketData for ObjectReferenceGetValuesReceive {
@@ -3140,13 +3134,13 @@ impl PacketData for ObjectReferenceGetValuesReceive {
   }
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
-    let values = <(i32, Vec<ObjectReferenceGetValuesReceiveValues>)>::read_from(reader, c)?;
+    let values = Vec::<ObjectReferenceGetValuesReceiveValues>::read_from(reader, c)?;
     Ok(ObjectReferenceGetValuesReceive { values })
   }
 }
 impl_conv_pretty_io_value_struct!(
   ObjectReferenceGetValuesReceive,
-  values: (i32, Vec<ObjectReferenceGetValuesReceiveValues>),
+  values: Vec<ObjectReferenceGetValuesReceiveValues>,
 );
 #[derive(Debug, PartialEq, Clone)]
 pub struct ObjectReferenceSetValuesSendValues {
@@ -3180,7 +3174,7 @@ pub struct ObjectReferenceSetValuesSend {
   /* The object ID */
   pub object: JDWPIDLengthEqObject,
   /* The number of fields to set. */
-  pub values: (i32, Vec<ObjectReferenceSetValuesSendValues>),
+  pub values: Vec<ObjectReferenceSetValuesSendValues>,
 }
 
 impl PacketData for ObjectReferenceSetValuesSend {
@@ -3192,14 +3186,14 @@ impl PacketData for ObjectReferenceSetValuesSend {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let object = JDWPIDLengthEqObject::read_from(reader, c)?;
-    let values = <(i32, Vec<ObjectReferenceSetValuesSendValues>)>::read_from(reader, c)?;
+    let values = Vec::<ObjectReferenceSetValuesSendValues>::read_from(reader, c)?;
     Ok(ObjectReferenceSetValuesSend { object, values })
   }
 }
 impl_conv_pretty_io_value_struct!(
   ObjectReferenceSetValuesSend,
   object: JDWPIDLengthEqObject,
-  values: (i32, Vec<ObjectReferenceSetValuesSendValues>),
+  values: Vec<ObjectReferenceSetValuesSendValues>,
 );
 #[derive(Debug, PartialEq, Clone)]
 pub struct ObjectReferenceMonitorInfoSend {
@@ -3251,7 +3245,7 @@ pub struct ObjectReferenceMonitorInfoReceive {
   /* The number of times the monitor has been entered. */
   pub entry_count: i32,
   /* The number of threads that are waiting for the monitor 0 if there is no current owner */
-  pub waiters: (i32, Vec<ObjectReferenceMonitorInfoReceiveWaiters>),
+  pub waiters: Vec<ObjectReferenceMonitorInfoReceiveWaiters>,
 }
 
 impl PacketData for ObjectReferenceMonitorInfoReceive {
@@ -3265,7 +3259,7 @@ impl PacketData for ObjectReferenceMonitorInfoReceive {
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let owner = JDWPIDLengthEqObject::read_from(reader, c)?;
     let entry_count = i32::read_from(reader, c)?;
-    let waiters = <(i32, Vec<ObjectReferenceMonitorInfoReceiveWaiters>)>::read_from(reader, c)?;
+    let waiters = Vec::<ObjectReferenceMonitorInfoReceiveWaiters>::read_from(reader, c)?;
     Ok(ObjectReferenceMonitorInfoReceive {
       owner,
       entry_count,
@@ -3277,7 +3271,7 @@ impl_conv_pretty_io_value_struct!(
   ObjectReferenceMonitorInfoReceive,
   owner: JDWPIDLengthEqObject,
   entry_count: i32,
-  waiters: (i32, Vec<ObjectReferenceMonitorInfoReceiveWaiters>),
+  waiters: Vec<ObjectReferenceMonitorInfoReceiveWaiters>,
 );
 #[derive(Debug, PartialEq, Clone)]
 pub struct ObjectReferenceInvokeMethodSendArguments {
@@ -3312,7 +3306,7 @@ pub struct ObjectReferenceInvokeMethodSend {
   /* The method to invoke. */
   pub method_id: JDWPIDLengthEqMethod,
   /* The number of arguments. */
-  pub arguments: (i32, Vec<ObjectReferenceInvokeMethodSendArguments>),
+  pub arguments: Vec<ObjectReferenceInvokeMethodSendArguments>,
   /* Invocation options */
   pub options: i32,
 }
@@ -3333,7 +3327,7 @@ impl PacketData for ObjectReferenceInvokeMethodSend {
     let thread = JDWPIDLengthEqObject::read_from(reader, c)?;
     let clazz = JDWPIDLengthEqReferenceType::read_from(reader, c)?;
     let method_id = JDWPIDLengthEqMethod::read_from(reader, c)?;
-    let arguments = <(i32, Vec<ObjectReferenceInvokeMethodSendArguments>)>::read_from(reader, c)?;
+    let arguments = Vec::<ObjectReferenceInvokeMethodSendArguments>::read_from(reader, c)?;
     let options = i32::read_from(reader, c)?;
     Ok(ObjectReferenceInvokeMethodSend {
       object,
@@ -3351,7 +3345,7 @@ impl_conv_pretty_io_value_struct!(
   thread: JDWPIDLengthEqObject,
   clazz: JDWPIDLengthEqReferenceType,
   method_id: JDWPIDLengthEqMethod,
-  arguments: (i32, Vec<ObjectReferenceInvokeMethodSendArguments>),
+  arguments: Vec<ObjectReferenceInvokeMethodSendArguments>,
   options: i32,
 );
 #[derive(Debug, PartialEq, Clone)]
@@ -3521,10 +3515,7 @@ impl_conv_pretty_io_value_struct!(
 #[derive(Debug, PartialEq, Clone)]
 pub struct ObjectReferenceReferringObjectsReceive {
   /* The number of objects that follow. */
-  pub referring_objects: (
-    i32,
-    Vec<ObjectReferenceReferringObjectsReceiveReferringObjects>,
-  ),
+  pub referring_objects: Vec<ObjectReferenceReferringObjectsReceiveReferringObjects>,
 }
 
 impl PacketData for ObjectReferenceReferringObjectsReceive {
@@ -3534,16 +3525,14 @@ impl PacketData for ObjectReferenceReferringObjectsReceive {
   }
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
-    let referring_objects = <(
-      i32,
-      Vec<ObjectReferenceReferringObjectsReceiveReferringObjects>,
-    )>::read_from(reader, c)?;
+    let referring_objects =
+      Vec::<ObjectReferenceReferringObjectsReceiveReferringObjects>::read_from(reader, c)?;
     Ok(ObjectReferenceReferringObjectsReceive { referring_objects })
   }
 }
 impl_conv_pretty_io_value_struct!(
   ObjectReferenceReferringObjectsReceive,
-  referring_objects: (i32, Vec<ObjectReferenceReferringObjectsReceiveReferringObjects>),
+  referring_objects: Vec<ObjectReferenceReferringObjectsReceiveReferringObjects>,
 );
 #[derive(Debug, PartialEq, Clone)]
 pub struct StringReferenceValueSend {
@@ -3828,7 +3817,7 @@ impl_conv_pretty_io_value_struct!(
 #[derive(Debug, PartialEq, Clone)]
 pub struct ThreadReferenceFramesReceive {
   /* The number of frames retreived */
-  pub frames: (i32, Vec<ThreadReferenceFramesReceiveFrames>),
+  pub frames: Vec<ThreadReferenceFramesReceiveFrames>,
 }
 
 impl PacketData for ThreadReferenceFramesReceive {
@@ -3838,13 +3827,13 @@ impl PacketData for ThreadReferenceFramesReceive {
   }
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
-    let frames = <(i32, Vec<ThreadReferenceFramesReceiveFrames>)>::read_from(reader, c)?;
+    let frames = Vec::<ThreadReferenceFramesReceiveFrames>::read_from(reader, c)?;
     Ok(ThreadReferenceFramesReceive { frames })
   }
 }
 impl_conv_pretty_io_value_struct!(
   ThreadReferenceFramesReceive,
-  frames: (i32, Vec<ThreadReferenceFramesReceiveFrames>),
+  frames: Vec<ThreadReferenceFramesReceiveFrames>,
 );
 #[derive(Debug, PartialEq, Clone)]
 pub struct ThreadReferenceFrameCountSend {
@@ -3934,7 +3923,7 @@ impl_conv_pretty_io_value_struct!(
 #[derive(Debug, PartialEq, Clone)]
 pub struct ThreadReferenceOwnedMonitorsReceive {
   /* The number of owned monitors */
-  pub owned: (i32, Vec<ThreadReferenceOwnedMonitorsReceiveOwned>),
+  pub owned: Vec<ThreadReferenceOwnedMonitorsReceiveOwned>,
 }
 
 impl PacketData for ThreadReferenceOwnedMonitorsReceive {
@@ -3944,13 +3933,13 @@ impl PacketData for ThreadReferenceOwnedMonitorsReceive {
   }
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
-    let owned = <(i32, Vec<ThreadReferenceOwnedMonitorsReceiveOwned>)>::read_from(reader, c)?;
+    let owned = Vec::<ThreadReferenceOwnedMonitorsReceiveOwned>::read_from(reader, c)?;
     Ok(ThreadReferenceOwnedMonitorsReceive { owned })
   }
 }
 impl_conv_pretty_io_value_struct!(
   ThreadReferenceOwnedMonitorsReceive,
-  owned: (i32, Vec<ThreadReferenceOwnedMonitorsReceiveOwned>),
+  owned: Vec<ThreadReferenceOwnedMonitorsReceiveOwned>,
 );
 #[derive(Debug, PartialEq, Clone)]
 pub struct ThreadReferenceCurrentContendedMonitorSend {
@@ -4137,10 +4126,7 @@ impl_conv_pretty_io_value_struct!(
 #[derive(Debug, PartialEq, Clone)]
 pub struct ThreadReferenceOwnedMonitorsStackDepthInfoReceive {
   /* The number of owned monitors */
-  pub owned: (
-    i32,
-    Vec<ThreadReferenceOwnedMonitorsStackDepthInfoReceiveOwned>,
-  ),
+  pub owned: Vec<ThreadReferenceOwnedMonitorsStackDepthInfoReceiveOwned>,
 }
 
 impl PacketData for ThreadReferenceOwnedMonitorsStackDepthInfoReceive {
@@ -4150,16 +4136,14 @@ impl PacketData for ThreadReferenceOwnedMonitorsStackDepthInfoReceive {
   }
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
-    let owned = <(
-      i32,
-      Vec<ThreadReferenceOwnedMonitorsStackDepthInfoReceiveOwned>,
-    )>::read_from(reader, c)?;
+    let owned =
+      Vec::<ThreadReferenceOwnedMonitorsStackDepthInfoReceiveOwned>::read_from(reader, c)?;
     Ok(ThreadReferenceOwnedMonitorsStackDepthInfoReceive { owned })
   }
 }
 impl_conv_pretty_io_value_struct!(
   ThreadReferenceOwnedMonitorsStackDepthInfoReceive,
-  owned: (i32, Vec<ThreadReferenceOwnedMonitorsStackDepthInfoReceiveOwned>),
+  owned: Vec<ThreadReferenceOwnedMonitorsStackDepthInfoReceiveOwned>,
 );
 #[derive(Debug, PartialEq, Clone)]
 pub struct ThreadReferenceForceEarlyReturnSend {
@@ -4339,9 +4323,9 @@ impl_conv_pretty_io_value_struct!(
 #[derive(Debug, PartialEq, Clone)]
 pub struct ThreadGroupReferenceChildrenReceive {
   /* The number of live child threads. */
-  pub child_threads: (i32, Vec<ThreadGroupReferenceChildrenReceiveChildThreads>),
+  pub child_threads: Vec<ThreadGroupReferenceChildrenReceiveChildThreads>,
   /* The number of active child thread groups. */
-  pub child_groups: (i32, Vec<ThreadGroupReferenceChildrenReceiveChildGroups>),
+  pub child_groups: Vec<ThreadGroupReferenceChildrenReceiveChildGroups>,
 }
 
 impl PacketData for ThreadGroupReferenceChildrenReceive {
@@ -4353,9 +4337,8 @@ impl PacketData for ThreadGroupReferenceChildrenReceive {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let child_threads =
-      <(i32, Vec<ThreadGroupReferenceChildrenReceiveChildThreads>)>::read_from(reader, c)?;
-    let child_groups =
-      <(i32, Vec<ThreadGroupReferenceChildrenReceiveChildGroups>)>::read_from(reader, c)?;
+      Vec::<ThreadGroupReferenceChildrenReceiveChildThreads>::read_from(reader, c)?;
+    let child_groups = Vec::<ThreadGroupReferenceChildrenReceiveChildGroups>::read_from(reader, c)?;
     Ok(ThreadGroupReferenceChildrenReceive {
       child_threads,
       child_groups,
@@ -4364,8 +4347,8 @@ impl PacketData for ThreadGroupReferenceChildrenReceive {
 }
 impl_conv_pretty_io_value_struct!(
   ThreadGroupReferenceChildrenReceive,
-  child_threads: (i32, Vec<ThreadGroupReferenceChildrenReceiveChildThreads>),
-  child_groups: (i32, Vec<ThreadGroupReferenceChildrenReceiveChildGroups>),
+  child_threads: Vec<ThreadGroupReferenceChildrenReceiveChildThreads>,
+  child_groups: Vec<ThreadGroupReferenceChildrenReceiveChildGroups>,
 );
 #[derive(Debug, PartialEq, Clone)]
 pub struct ArrayReferenceLengthSend {
@@ -4494,7 +4477,7 @@ pub struct ArrayReferenceSetValuesSend {
   /* The first index to set. */
   pub first_index: i32,
   /* The number of values to set. */
-  pub values: (i32, Vec<ArrayReferenceSetValuesSendValues>),
+  pub values: Vec<ArrayReferenceSetValuesSendValues>,
 }
 
 impl PacketData for ArrayReferenceSetValuesSend {
@@ -4508,7 +4491,7 @@ impl PacketData for ArrayReferenceSetValuesSend {
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let array_object = JDWPIDLengthEqObject::read_from(reader, c)?;
     let first_index = i32::read_from(reader, c)?;
-    let values = <(i32, Vec<ArrayReferenceSetValuesSendValues>)>::read_from(reader, c)?;
+    let values = Vec::<ArrayReferenceSetValuesSendValues>::read_from(reader, c)?;
     Ok(ArrayReferenceSetValuesSend {
       array_object,
       first_index,
@@ -4520,7 +4503,7 @@ impl_conv_pretty_io_value_struct!(
   ArrayReferenceSetValuesSend,
   array_object: JDWPIDLengthEqObject,
   first_index: i32,
-  values: (i32, Vec<ArrayReferenceSetValuesSendValues>),
+  values: Vec<ArrayReferenceSetValuesSendValues>,
 );
 #[derive(Debug, PartialEq, Clone)]
 pub struct ClassLoaderReferenceVisibleClassesSend {
@@ -4578,7 +4561,7 @@ impl_conv_pretty_io_value_struct!(
 #[derive(Debug, PartialEq, Clone)]
 pub struct ClassLoaderReferenceVisibleClassesReceive {
   /* The number of visible classes. */
-  pub classes: (i32, Vec<ClassLoaderReferenceVisibleClassesReceiveClasses>),
+  pub classes: Vec<ClassLoaderReferenceVisibleClassesReceiveClasses>,
 }
 
 impl PacketData for ClassLoaderReferenceVisibleClassesReceive {
@@ -4588,14 +4571,13 @@ impl PacketData for ClassLoaderReferenceVisibleClassesReceive {
   }
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
-    let classes =
-      <(i32, Vec<ClassLoaderReferenceVisibleClassesReceiveClasses>)>::read_from(reader, c)?;
+    let classes = Vec::<ClassLoaderReferenceVisibleClassesReceiveClasses>::read_from(reader, c)?;
     Ok(ClassLoaderReferenceVisibleClassesReceive { classes })
   }
 }
 impl_conv_pretty_io_value_struct!(
   ClassLoaderReferenceVisibleClassesReceive,
-  classes: (i32, Vec<ClassLoaderReferenceVisibleClassesReceiveClasses>),
+  classes: Vec<ClassLoaderReferenceVisibleClassesReceiveClasses>,
 );
 #[derive(Debug, PartialEq, Clone)]
 pub enum EventRequestSetSendModifiersModKind {
@@ -5173,7 +5155,7 @@ pub struct EventRequestSetSend {
   /* What threads are suspended when this event occurs? Note that the order of events and command replies accurately reflects the order in which threads are suspended and resumed. For example, if a VM-wide resume is processed before an event occurs which suspends the VM, the reply to the resume command will be written to the transport before the suspending event. */
   pub suspend_policy: i8,
   /* Constraints used to control the number of generated events.Modifiers specify additional tests that an event must satisfy before it is placed in the event queue. Events are filtered by applying each modifier to an event in the order they are specified in this collection Only events that satisfy all modifiers are reported. A value of 0 means there are no modifiers in the request.Filtering can improve debugger performance dramatically byreducing the amount of event traffic sent from the target VM to the debugger VM. */
-  pub modifiers: (i32, Vec<EventRequestSetSendModifiers>),
+  pub modifiers: Vec<EventRequestSetSendModifiers>,
 }
 
 impl PacketData for EventRequestSetSend {
@@ -5187,7 +5169,7 @@ impl PacketData for EventRequestSetSend {
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let event_kind = i8::read_from(reader, c)?;
     let suspend_policy = i8::read_from(reader, c)?;
-    let modifiers = <(i32, Vec<EventRequestSetSendModifiers>)>::read_from(reader, c)?;
+    let modifiers = Vec::<EventRequestSetSendModifiers>::read_from(reader, c)?;
     Ok(EventRequestSetSend {
       event_kind,
       suspend_policy,
@@ -5199,7 +5181,7 @@ impl_conv_pretty_io_value_struct!(
   EventRequestSetSend,
   event_kind: i8,
   suspend_policy: i8,
-  modifiers: (i32, Vec<EventRequestSetSendModifiers>),
+  modifiers: Vec<EventRequestSetSendModifiers>,
 );
 #[derive(Debug, PartialEq, Clone)]
 pub struct EventRequestSetReceive {
@@ -5285,7 +5267,7 @@ pub struct StackFrameGetValuesSend {
   /* The frame ID. */
   pub frame: JDWPIDLengthEqFrame,
   /* The number of values to get. */
-  pub slots: (i32, Vec<StackFrameGetValuesSendSlots>),
+  pub slots: Vec<StackFrameGetValuesSendSlots>,
 }
 
 impl PacketData for StackFrameGetValuesSend {
@@ -5299,7 +5281,7 @@ impl PacketData for StackFrameGetValuesSend {
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let thread = JDWPIDLengthEqObject::read_from(reader, c)?;
     let frame = JDWPIDLengthEqFrame::read_from(reader, c)?;
-    let slots = <(i32, Vec<StackFrameGetValuesSendSlots>)>::read_from(reader, c)?;
+    let slots = Vec::<StackFrameGetValuesSendSlots>::read_from(reader, c)?;
     Ok(StackFrameGetValuesSend {
       thread,
       frame,
@@ -5311,7 +5293,7 @@ impl_conv_pretty_io_value_struct!(
   StackFrameGetValuesSend,
   thread: JDWPIDLengthEqObject,
   frame: JDWPIDLengthEqFrame,
-  slots: (i32, Vec<StackFrameGetValuesSendSlots>),
+  slots: Vec<StackFrameGetValuesSendSlots>,
 );
 #[derive(Debug, PartialEq, Clone)]
 pub struct StackFrameGetValuesReceiveValues {
@@ -5338,7 +5320,7 @@ impl_conv_pretty_io_value_struct!(
 #[derive(Debug, PartialEq, Clone)]
 pub struct StackFrameGetValuesReceive {
   /* The number of values retrieved, always equal to slots, the number of values to get. */
-  pub values: (i32, Vec<StackFrameGetValuesReceiveValues>),
+  pub values: Vec<StackFrameGetValuesReceiveValues>,
 }
 
 impl PacketData for StackFrameGetValuesReceive {
@@ -5348,13 +5330,13 @@ impl PacketData for StackFrameGetValuesReceive {
   }
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
-    let values = <(i32, Vec<StackFrameGetValuesReceiveValues>)>::read_from(reader, c)?;
+    let values = Vec::<StackFrameGetValuesReceiveValues>::read_from(reader, c)?;
     Ok(StackFrameGetValuesReceive { values })
   }
 }
 impl_conv_pretty_io_value_struct!(
   StackFrameGetValuesReceive,
-  values: (i32, Vec<StackFrameGetValuesReceiveValues>),
+  values: Vec<StackFrameGetValuesReceiveValues>,
 );
 #[derive(Debug, PartialEq, Clone)]
 pub struct StackFrameSetValuesSendSlotValues {
@@ -5390,7 +5372,7 @@ pub struct StackFrameSetValuesSend {
   /* The frame ID. */
   pub frame: JDWPIDLengthEqFrame,
   /* The number of values to set. */
-  pub slot_values: (i32, Vec<StackFrameSetValuesSendSlotValues>),
+  pub slot_values: Vec<StackFrameSetValuesSendSlotValues>,
 }
 
 impl PacketData for StackFrameSetValuesSend {
@@ -5404,7 +5386,7 @@ impl PacketData for StackFrameSetValuesSend {
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let thread = JDWPIDLengthEqObject::read_from(reader, c)?;
     let frame = JDWPIDLengthEqFrame::read_from(reader, c)?;
-    let slot_values = <(i32, Vec<StackFrameSetValuesSendSlotValues>)>::read_from(reader, c)?;
+    let slot_values = Vec::<StackFrameSetValuesSendSlotValues>::read_from(reader, c)?;
     Ok(StackFrameSetValuesSend {
       thread,
       frame,
@@ -5416,7 +5398,7 @@ impl_conv_pretty_io_value_struct!(
   StackFrameSetValuesSend,
   thread: JDWPIDLengthEqObject,
   frame: JDWPIDLengthEqFrame,
-  slot_values: (i32, Vec<StackFrameSetValuesSendSlotValues>),
+  slot_values: Vec<StackFrameSetValuesSendSlotValues>,
 );
 #[derive(Debug, PartialEq, Clone)]
 pub struct StackFrameThisObjectSend {
@@ -6721,7 +6703,7 @@ pub struct EventCompositeReceive {
   /* Which threads where suspended by this composite event? */
   pub suspend_policy: i8,
   /* Events in set. */
-  pub events: (i32, Vec<EventCompositeReceiveEvents>),
+  pub events: Vec<EventCompositeReceiveEvents>,
 }
 
 impl PacketData for EventCompositeReceive {
@@ -6733,7 +6715,7 @@ impl PacketData for EventCompositeReceive {
 
   fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
     let suspend_policy = i8::read_from(reader, c)?;
-    let events = <(i32, Vec<EventCompositeReceiveEvents>)>::read_from(reader, c)?;
+    let events = Vec::<EventCompositeReceiveEvents>::read_from(reader, c)?;
     Ok(EventCompositeReceive {
       suspend_policy,
       events,
@@ -6743,5 +6725,5 @@ impl PacketData for EventCompositeReceive {
 impl_conv_pretty_io_value_struct!(
   EventCompositeReceive,
   suspend_policy: i8,
-  events: (i32, Vec<EventCompositeReceiveEvents>),
+  events: Vec<EventCompositeReceiveEvents>,
 );

@@ -284,7 +284,7 @@ def create_rust_structs_from_cmd_data(cmd_name: str, table_data: Array[dict]) ->
   ret += "  fn read_from<R: std::io::Read>(reader: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {\n"
   for field in table_data:
     if field["type"] == "repeated":
-      ret += f"    let {camel_to_snake(field['name'])} = <(i32, Vec<{snake_to_camel(cmd_name)}{snake_to_camel(field['name'])}>)>::read_from(reader, c)?;\n"
+      ret += f"    let {camel_to_snake(field['name'])} = Vec::<{snake_to_camel(cmd_name)}{snake_to_camel(field['name'])}>::read_from(reader, c)?;\n"
     else:
       # read_untagged_from は array_region でしか発生しえない。
       # untagged-value が含まれる場合に read_from を呼び出すとエラーになるが、
@@ -413,7 +413,7 @@ def type_to_rust_str(cmd_name: str, field: dict) -> str:
     return type_mapping[type_name]
   
   if type_name == "repeated":
-    return f"(i32, Vec<{cmd_name}{snake_to_camel(field['name'])}>)"
+    return f"Vec<{cmd_name}{snake_to_camel(field['name'])}>"
   if type_name == "case":
     return f"{cmd_name}{snake_to_camel(field['name'])}"
 
