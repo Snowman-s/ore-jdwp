@@ -582,13 +582,13 @@ derive_for_ids!(JDWPIDLengthEqObject, id, object_id_size);
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct JDWPTaggedObjectID {
   pub tag: u8,
-  pub method_id: u64,
+  pub object_id: u64,
 }
 
 impl PacketData for JDWPTaggedObjectID {
   fn write_to<W: Write>(&self, w: &mut W) -> Result<(), std::io::Error> {
     w.write_all(&[self.tag])?;
-    w.write_all(&self.method_id.to_be_bytes())?;
+    w.write_all(&self.object_id.to_be_bytes())?;
     Ok(())
   }
   fn read_from<R: Read>(r: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
@@ -603,11 +603,11 @@ impl PacketData for JDWPTaggedObjectID {
     r.read_exact(&mut id_bytes)?;
     Ok(JDWPTaggedObjectID {
       tag,
-      method_id: u64::from_be_bytes(id_bytes.try_into().unwrap()),
+      object_id: u64::from_be_bytes(id_bytes.try_into().unwrap()),
     })
   }
 }
-impl_conv_pretty_io_value_struct!(JDWPTaggedObjectID, tag: u8, method_id: u64,);
+impl_conv_pretty_io_value_struct!(JDWPTaggedObjectID, tag: u8, object_id: u64,);
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct JDWPIDLengthEqReferenceType {
