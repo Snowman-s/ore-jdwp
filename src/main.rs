@@ -34,13 +34,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   println!("Connected to {}", addr);
 
   let payloads: Arc<Mutex<Vec<JDWPPacketDataFromDebugger>>> = Arc::new(Mutex::new(Vec::new()));
-  let context = Arc::new(Mutex::new(JDWPContext {
-    field_id_size: Option::None,
-    method_id_size: Option::None,
-    object_id_size: Option::None,
-    reference_type_id_size: Option::None,
-    frame_id_size: Option::None,
-  }));
+  let context = Arc::new(Mutex::new(JDWPContext { id_sizes: None }));
 
   // --- Handshake ---
   let handshake = b"JDWP-Handshake";
@@ -64,7 +58,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   let mut buf = [0u8; 1024];
   let amount = stream.read(&mut buf[..]).await?;
   assert!(amount < 1024);
-  let Some((JDWPPacketDataFromDebuggee::VirtualMachineIDSizes(packet), _)) = receive_packet(
+  let Ok((JDWPPacketDataFromDebuggee::VirtualMachineIDSizes(packet), _)) = receive_packet(
     amount as usize - 4,
     &mut &buf[4..amount],
     &payloads.lock().await,
@@ -110,7 +104,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
           let mut guard = writer_and_debugger_id.lock().await;
           let (write_guard, debugger_id) = &mut *guard;
           let msg = match packet_and_id {
-            Some((packet, id)) => {
+            Ok((packet, id)) => {
               let mut str = String::new();
               for i in packet.to_value() {
                 str.push_str(&i.to_string());
@@ -118,7 +112,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
               }
               format!("{}> Received packet: {}\n", id, str.trim_end())
             }
-            None => format!("?> Failed to decode packet: {:?}\n", &buf[..n]),
+            Err(_) => format!("?> Failed to decode packet: {:?}\n", &buf[..n]),
           };
 
           // 先に、先頭に戻る

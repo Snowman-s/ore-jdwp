@@ -163,35 +163,35 @@ macro_rules! jdwp_command_map {
       send_from_debugger: &[JDWPPacketDataFromDebugger],
       data_without_length: &[u8],
       con: &JDWPContext,
-    ) -> Option<(JDWPPacketDataFromDebuggee, i32)> {
+    ) -> Result<(JDWPPacketDataFromDebuggee, i32), PacketFromDebuggeeError> {
       let mut cursor = std::io::Cursor::new(data_without_length);
-      let id = i32::read_from(&mut cursor, con).ok()?;
-      let flags = u8::read_from(&mut cursor, con).ok()?;
+      let id = i32::read_from(&mut cursor, con)?;
+      let flags = u8::read_from(&mut cursor, con)?;
 
       if flags & 0x80 != 0 {
         // Reply Packet
-        let err_code = u16::read_from(&mut cursor, con).ok()?;
+        let err_code = u16::read_from(&mut cursor, con)?;
         if err_code != 0 {
-          return None
+          return Err(PacketFromDebuggeeError::ResponseWithErrorCode(err_code));
         }
 
         match send_from_debugger[id as usize] {
           $(JDWPPacketDataFromDebugger::$name(_) => {
-            <$response>::read_from(&mut cursor, con).ok().map(|t| (JDWPPacketDataFromDebuggee::$name(t), id))
+            Ok(<$response>::read_from(&mut cursor, con).map(|t| (JDWPPacketDataFromDebuggee::$name(t), id))?)
           }),*
-          _ => None
+          _ => Err(PacketFromDebuggeeError::NoPayloadForThat(id as usize))
         }
       } else {
-        let cmd_set = u8::read_from(&mut cursor, con).ok()?;
-        let cmd = u8::read_from(&mut cursor, con).ok()?;
+        let cmd_set = u8::read_from(&mut cursor, con)?;
+        let cmd = u8::read_from(&mut cursor, con)?;
         match (cmd_set, cmd) {
           $(
             ($set2, $cmd2) => {
-              let data = <$response2>::read_from(&mut cursor, con).ok()?;
-              Some((JDWPPacketDataFromDebuggee::$name2(data), id))
+              let data = <$response2>::read_from(&mut cursor, con)?;
+              Ok((JDWPPacketDataFromDebuggee::$name2(data), id))
             }
           ),*
-          _ => None
+          _ => Err(PacketFromDebuggeeError::NoCmdForThat(cmd_set, cmd))
         }
       }
     }
@@ -293,6 +293,20 @@ jdwp_command_map!(
   EventComposite("ec", (), EventCompositeReceive) => (64, 100),
 );
 
+#[derive(Debug)]
+pub enum PacketFromDebuggeeError {
+  IoError(std::io::Error),
+  NoCmdForThat(u8, u8),
+  NoPayloadForThat(usize),
+  ResponseWithErrorCode(u16),
+}
+
+impl From<std::io::Error> for PacketFromDebuggeeError {
+  fn from(err: std::io::Error) -> Self {
+    PacketFromDebuggeeError::IoError(err)
+  }
+}
+
 pub async fn send_packet<W: AsyncWrite + Unpin>(
   stream: &mut W,
   id: i32,
@@ -309,10 +323,10 @@ pub async fn receive_packet<R: AsyncRead + Unpin>(
   reader_without_length: &mut R,
   payloads: &[JDWPPacketDataFromDebugger],
   context: &JDWPContext,
-) -> Option<(JDWPPacketDataFromDebuggee, i32)> {
+) -> Result<(JDWPPacketDataFromDebuggee, i32), PacketFromDebuggeeError> {
   let data = {
     let mut buf = vec![0; packet_length_without_first];
-    reader_without_length.read_exact(&mut buf).await.ok()?;
+    reader_without_length.read_exact(&mut buf).await?;
     buf
   };
 
