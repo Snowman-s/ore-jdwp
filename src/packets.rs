@@ -2,7 +2,7 @@
 pub mod conv_input;
 
 use std::{
-  fmt::{Debug, Display},
+  fmt::{Debug, Display, Formatter},
   io::{Read, Write},
 };
 
@@ -16,20 +16,27 @@ pub use crate::packets::conv_input::*;
 
 #[derive(Debug, Clone)]
 pub struct JDWPContext {
-  pub field_id_size: Option<u8>,
-  pub method_id_size: Option<u8>,
-  pub object_id_size: Option<u8>,
-  pub reference_type_id_size: Option<u8>,
-  pub frame_id_size: Option<u8>,
+  pub id_sizes: Option<JDWPContextIDSizes>,
+}
+
+#[derive(Debug, Clone)]
+pub struct JDWPContextIDSizes {
+  pub field: u8,
+  pub method: u8,
+  pub object: u8,
+  pub reference_type: u8,
+  pub frame: u8,
 }
 
 impl JDWPContext {
   pub fn set_from_id_sizes_response(&mut self, response: &VirtualMachineIDSizesReceive) {
-    self.field_id_size = Some(response.field_idsize as u8);
-    self.method_id_size = Some(response.method_idsize as u8);
-    self.object_id_size = Some(response.object_idsize as u8);
-    self.reference_type_id_size = Some(response.reference_type_idsize as u8);
-    self.frame_id_size = Some(response.frame_idsize as u8);
+    self.id_sizes = Some(JDWPContextIDSizes {
+      field: response.field_idsize as u8,
+      method: response.method_idsize as u8,
+      object: response.object_idsize as u8,
+      reference_type: response.reference_type_idsize as u8,
+      frame: response.frame_idsize as u8,
+    });
   }
 }
 
@@ -537,10 +544,10 @@ macro_rules! derive_for_ids {
       fn read_from<R: Read>(r: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
         let mut ref_id_bytes = vec![
           0u8;
-          c.$id_size.ok_or(std::io::Error::new(
+          c.id_sizes.as_ref().ok_or(std::io::Error::new(
             std::io::ErrorKind::InvalidData,
-            "Reference ID size not set in context",
-          ))? as usize
+            "ID size not set in context",
+          ))?.$id_size as usize
         ];
         r.read_exact(&mut ref_id_bytes)?;
         Ok($struct {
@@ -577,28 +584,32 @@ macro_rules! derive_for_ids {
 pub struct JDWPIDLengthEqObject {
   pub id: u64,
 }
-derive_for_ids!(JDWPIDLengthEqObject, id, object_id_size);
+derive_for_ids!(JDWPIDLengthEqObject, id, object);
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct JDWPTaggedObjectID {
-  pub tag: u8,
+  pub tag: JDWPTagConstants,
   pub object_id: u64,
 }
 
 impl PacketData for JDWPTaggedObjectID {
   fn write_to<W: Write>(&self, w: &mut W) -> Result<(), std::io::Error> {
-    w.write_all(&[self.tag])?;
+    w.write_all(&[self.tag as u8])?;
     w.write_all(&self.object_id.to_be_bytes())?;
     Ok(())
   }
   fn read_from<R: Read>(r: &mut R, c: &JDWPContext) -> Result<Self, std::io::Error> {
-    let tag = u8::read_from(r, c)?;
+    let tag = JDWPTagConstants::read_from(r, c)?;
     let mut id_bytes = vec![
       0u8;
-      c.object_id_size.ok_or(std::io::Error::new(
-        std::io::ErrorKind::InvalidData,
-        "Object ID size not set in context",
-      ))? as usize
+      c.id_sizes
+        .as_ref()
+        .ok_or(std::io::Error::new(
+          std::io::ErrorKind::InvalidData,
+          "Object ID size not set in context",
+        ))?
+        .object
+        .clone() as usize
     ];
     r.read_exact(&mut id_bytes)?;
     Ok(JDWPTaggedObjectID {
@@ -607,31 +618,31 @@ impl PacketData for JDWPTaggedObjectID {
     })
   }
 }
-impl_conv_pretty_io_value_struct!(JDWPTaggedObjectID, tag: u8, object_id: u64,);
+impl_conv_pretty_io_value_struct!(JDWPTaggedObjectID, tag: JDWPTagConstants, object_id: u64,);
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct JDWPIDLengthEqReferenceType {
   pub id: u64,
 }
-derive_for_ids!(JDWPIDLengthEqReferenceType, id, reference_type_id_size);
+derive_for_ids!(JDWPIDLengthEqReferenceType, id, reference_type);
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct JDWPIDLengthEqMethod {
   pub id: u64,
 }
-derive_for_ids!(JDWPIDLengthEqMethod, id, method_id_size);
+derive_for_ids!(JDWPIDLengthEqMethod, id, method);
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct JDWPIDLengthEqField {
   pub id: u64,
 }
-derive_for_ids!(JDWPIDLengthEqField, id, field_id_size);
+derive_for_ids!(JDWPIDLengthEqField, id, field);
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct JDWPIDLengthEqFrame {
   pub id: u64,
 }
-derive_for_ids!(JDWPIDLengthEqFrame, id, frame_id_size);
+derive_for_ids!(JDWPIDLengthEqFrame, id, frame);
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 #[repr(u8)]
@@ -769,6 +780,12 @@ impl ConvPrettyIOValue for JDWPTagConstants {
 
   fn from_value_require_types() -> Vec<PrettyIOKindTypes> {
     vec![PrettyIOKindTypes::Int]
+  }
+}
+
+impl Display for JDWPTagConstants {
+  fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+    write!(f, "{}", (*self as u8) as char)
   }
 }
 
